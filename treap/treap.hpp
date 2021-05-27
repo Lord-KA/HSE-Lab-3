@@ -87,7 +87,6 @@ public:
     
     Data *get(size_t id) const
     {
-        // std::cerr << (id == -1) << ' ' << id << '\n'; //DEBUG
         assert(id != -1);
         assert(id < capacity);
         return &data[id].val;
@@ -304,7 +303,7 @@ public:
     
 
     //======================================
-    // TREAP internal functions
+    // TREAP interface functions
 
     Treap() : root_id(-1) {}
     Treap(const Treap &other) : root_id(other.root_id), pool(other.pool) {}
