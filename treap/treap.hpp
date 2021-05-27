@@ -181,10 +181,10 @@ public:
         using value_type        = Node;
         
         Iterator( size_t id=-1, const ObjPool<Node>* pool=nullptr ) : id(id), pool(pool) {}
-        Iterator( const Iterator &other )                     : id(other.id), pool(other.pool) {};
+        Iterator( const Iterator &other ) = default;
         
-        bool operator==( const Iterator other ) const { return id == other.id;}
-        bool operator!=( const Iterator other ) const { return id != other.id;}
+        bool operator==( const Iterator other ) const { return id == other.id; }
+        bool operator!=( const Iterator other ) const { return id != other.id; }
 
         std::pair<Key, Data&> operator*() { Node* v = pool->get(id); \
                                             return {v->x, v->val}; }
@@ -299,7 +299,7 @@ public:
     };
 
     Iterator begin() const { return Iterator(min_vert(root_id), &pool); } 
-    Iterator end()   const { return Iterator(); }
+    Iterator end()   const { return Iterator(-1, &pool); }
     
 
     //======================================

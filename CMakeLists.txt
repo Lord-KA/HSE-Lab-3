@@ -36,9 +36,14 @@ set_target_properties(gmock_main PROPERTIES FOLDER extern)
 enable_testing()
 
 #add_subdirectory(./vector)
-#add_subdirectory(./treap)
-#add_subdirectory(./ulint)
+add_subdirectory(./treap)
+add_subdirectory(./linkedList)
 add_subdirectory(./deque)
+
+
+
+
+
 
 message("")
 message("")

@@ -1,7 +1,6 @@
 #ifndef LINKEDLIST_HPP
 #define LINKEDLIST_HPP
 
-#include <vector>
 #include <iostream>
 #include <cassert>
 
@@ -14,7 +13,7 @@ T exchange(T& obj, U&& new_value)
     return old_value;
 }
 
-//==================================
+//==========================================
 // Object pool
 
 template<typename Data>
@@ -130,7 +129,7 @@ private:
     }
 };
 
-//==================================
+//==========================================
 // LinkedList
 
 template<typename T>
@@ -147,20 +146,70 @@ private:
     ObjPool<Node> pool;
 
 public:
+    //===================================
+    //  Interface functions
     
     linkedList() : head_(-1), size_(0) {}
-    linkedList( const linkedList &other ) : head_(other.head_), size_(other.size_), pool(other.pool) {}
-    linkedList( linkedList &&other ) : head_(other.head_), size_(other.size_) { pool = std::move(other.pool); }
+    linkedList( const linkedList &other ) = default;
+    linkedList( linkedList &&other ) : head_(other.head_), size_(other.size_) { pool = std::move(other.pool); other.head_ = -1; other.size_ = 0; }
+
+    linkedList& operator=( const linkedList &other ) { head_ = other.head_; size_ = other.size_; pool = other.pool; return *this; }
+    linkedList& operator=( linkedList &&other )  { head_ = other.head_; size_ = other.size_; pool = std::move(other.pool); other.head_ = -1; other.size_ = 0; return *this; }
+
 
     void insert( const T &val ) { insert(0, val); };
     void insert( size_t n, const T &val );
+    T erase( size_t n = 0 );
 
-    T eject( size_t n = 0 );
+    size_t size() const { return size_; }
+
+    template<class Container>
+    bool operator==( const Container &other ) const;
+    template<class Container>
+    bool operator!=( const Container &other ) const { return !(*this == other); }
 
     void dump(std::ostream &out) const;        //DEBUG
 
-    T erase( size_t n );
-    T get  ( size_t n );
+    T& operator[](size_t n); 
+    const T& operator[](size_t n) const; 
+
+    //===================================
+    //  Iterators
+
+    struct Iterator {
+        using iterator_category = std::forward_iterator_tag;
+        using difference_type   = std::ptrdiff_t;
+        using value_type        = Node;
+
+        Iterator( size_t id = -1, const ObjPool<Node> *pool = nullptr ) : pool_(pool), id_(id) {};
+        Iterator( const Iterator &other ) = default;
+
+        bool operator==( const Iterator &other ) const { return id_ == other.id_; }
+        bool operator!=( const Iterator &other ) const { return id_ != other.id_; }
+
+        T operator*() { assert(id_ != -1); return pool_->get(id_)->val_; }
+        const T operator*() const { assert(id_ != -1); return pool_->get(id_)->val_; }
+
+        Iterator operator++() {
+            id_ = pool_->get(id_)->next_;
+            return *this;
+        }
+
+        Iterator operator++(int) {
+            Iterator result(*this);
+            id_ = pool_->get(id_)->next_;
+            return result;
+        }
+
+
+    private:
+        const ObjPool<Node> *pool_;
+        size_t id_;
+
+    };
+
+    Iterator begin() const { return Iterator(head_, &pool); }
+    Iterator end()   const { return Iterator(   -1, &pool); }
 };
 
 template<typename T>
@@ -186,7 +235,7 @@ void linkedList<T>::insert(size_t n, const T &val) {
 }
 
 template<typename T>
-T linkedList<T>::eject(size_t n) {
+T linkedList<T>::erase(size_t n) {
     assert(n < size_);
     --size_;
     if (n == 0){
@@ -200,22 +249,52 @@ T linkedList<T>::eject(size_t n) {
     Node *v = pool.get(id);
     size_t result_id = v->next_;
     v->next_ = pool.get(result_id)->next_;
-    return pool.get(result_id)->val_;
+    T result_val = pool.get(result_id)->val_;
+    pool.free(result_id);
+    return result_val;
 }
 
 template<typename T>
 void linkedList<T>::dump(std::ostream &out) const {
     out << "head = " << head_ << '\n';
     out << "size = " << size_ << '\n';
-    size_t id = head_;
-    for (size_t i = 0; i < size_; ++i){
-        out << "( " << pool.get(id)->val_ << " )";
-        if (i != size_ - 1)
-            out << ", ";
-        else
-            out << '\n';
-        id = pool.get(id)->next_;
+    for (auto elem : *this)
+        out << "( " << elem << " ) ";
+    out << '\n';
+}
+
+template<typename T>
+template<class Container>
+bool linkedList<T>::operator==(const Container &other) const {
+    if (size() != other.size()){
+        return false;
     }
+
+    Iterator iter_1 = begin();
+    auto iter_2 = other.begin();
+    while (iter_1 != end()) {
+        if (*iter_1 != *iter_2)
+            return false;
+        ++iter_1; ++iter_2;
+    }
+    return true;
+}
+
+
+template<typename T>
+T& linkedList<T>::operator[](size_t n) {
+    size_t id = head_;
+    for (size_t i = 0; i < n; ++i)
+        id = pool.get(id)->next_;
+    return pool.get(id)->val_;
+}
+
+template<typename T>
+const T& linkedList<T>::operator[](size_t n) const {
+    size_t id = head_;
+    for (size_t i = 0; i < n; ++i)
+        id = pool.get(id)->next_;
+    return pool.get(id)->val_;
 }
 
 #endif
