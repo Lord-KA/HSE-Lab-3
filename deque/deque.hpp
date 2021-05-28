@@ -184,8 +184,8 @@ public:
         T& operator*() { assert(id <= this_->capacity_); return this_->data[id]; }               //TODO find and fix a bug that kills std::copy
         const T& operator*() const { assert(id <= this_->capacity_); return this_->data[id]; }
 
-        T& operator[]( long long int n ) { return this_->data[id + n]; }
-        const T& operator[]( long long int n ) const { return this_->data[(id + n) & this_->capacity_]; }
+        // T& operator[]( long long int n ) { return this_->data[id + n]; }
+        // const T& operator[]( long long int n ) const { return this_->data[(id + n) & this_->capacity_]; }
 
         Iterator operator++(){
             ++id;
