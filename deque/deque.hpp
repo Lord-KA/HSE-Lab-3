@@ -12,7 +12,7 @@ static constexpr int POISON = 0xDEADBEEF;
 
 template<typename T>
 void fillPoison(T* data) {
-    for (size_t k = 0; k < sizeof(data) / sizeof(POISON); ++k)
+    for (size_t k = 0; k < sizeof(*data) / sizeof(poison_t); ++k)
         static_cast<poison_t*>(data)[k] = POISON;
 }
 
@@ -21,10 +21,22 @@ bool isPoisoned(T* data) {
     return (static_cast<poison_t*>(data)[0] == POISON);
 }
 
+enum class health_error { none, size, empty, nooverflow, overflow };
+
 #define DEQUE_CHECK(v) { \
-    if (!HealthCheck()) \
+    health_error error = HealthCheck(); \
+    if (error != health_error::none) \
     { \
-        std::cerr << "Deque error in " << __func__ << " at " << __LINE__ << "\n"; \
+        std::cerr << "Deque "; \
+        if (error == health_error::size) \
+            std::cerr << "size"; \
+        if (error == health_error::empty) \
+            std::cerr << "empty"; \
+        if (error == health_error::overflow) \
+            std::cerr << "overflow"; \
+        if (error == health_error::nooverflow) \
+            std::cerr << "nooverflow"; \
+        std::cerr << " error in " << __func__ << " at " << __LINE__ << "\n"; \
         std::cerr.flush(); \
         dump(std::cerr); \
         std::exit(0); \
@@ -77,7 +89,7 @@ public:
 
     void refit( size_t capacity_ = -1 );                   //refit() fits data to the len OR reallocates memory  //TODO OR fit to size_
 
-          T& operator[]( size_t pos )       { return data[(pos + begin_) & capacity_]; }              //TODO write pos correctness check
+          T& operator[]( size_t pos )       { return data[(pos + begin_) & capacity_]; }              
     const T& operator[]( size_t pos ) const { return data[(pos + begin_) & capacity_]; }  
 
     size_t size() const { return size_; }
@@ -112,39 +124,38 @@ public:
         out << '\n';
 
     }
-    
-    bool HealthCheck() {
-        if (size_ > capacity_)
-            return false;
+    health_error HealthCheck() {
+        if (size_ > capacity_ + 1)
+            return health_error::size;
 
         if (!size_){
             for (size_t i = 0; i <= capacity_; ++i)
                 if (!isPoisoned(&data[i]))
-                    return false;
-            return true;
+                    return health_error::empty;
+            return health_error::none;
         }
 
         if (begin_ <= end_)
             for (size_t i = 0; i <= capacity_; ++i){
                 if (begin_ <= i && i <= end_){
                     if (isPoisoned(&data[i]))
-                        return false;
+                        return health_error::nooverflow;
                 }
                 else
                     if (!isPoisoned(&data[i]))
-                        return false;
+                        return health_error::nooverflow;
             }
         else
             for (size_t i = 0; i <= capacity_; ++i){
-                if (begin_ < i && i < end_){
+                if (end_ < i && i < begin_){
                     if (!isPoisoned(&data[i]))
-                        return false;
+                        return health_error::overflow;
                 }
                 else
                     if (isPoisoned(&data[i]))
-                        return false;
+                        return health_error::overflow;
             }
-        return true;
+        return health_error::none;
     }
     #endif
 
@@ -159,6 +170,7 @@ public:
 
     private:
         size_t id;
+        size_t pos;
         const deque *this_;
 
 
@@ -169,25 +181,23 @@ public:
         using pointer           = T*;
         using reference         = T&;
 
-        Iterator( size_t id, deque<T>* this__ = nullptr ) : id(id), this_(this__) {}
-        Iterator( size_t id, const deque<T>* this__ = nullptr ) : id(id), this_(this__) {}
-        Iterator( const Iterator& other) : id(other.id) {}
+        Iterator( size_t id, size_t pos, const deque<T>* this_ = nullptr ) : id(id), this_(this_), pos(pos) {}
+        Iterator( const Iterator& other) : id(other.id), this_(other.this_), pos(other.pos) {}
 
-        bool operator==( const Iterator& other ) const { return id == other.id; }
-        bool operator!=( const Iterator& other ) const { return id != other.id; }
+        bool operator==( const Iterator& other ) const { return pos == other.pos; }
+        bool operator!=( const Iterator& other ) const { return pos != other.pos;  }
 
-        // bool operator< ( const Iterator& other ) const { return id <  other.id; }
-        // bool operator> ( const Iterator& other ) const { return id >  other.id; }
-        // bool operator<=( const Iterator& other ) const { return id <= other.id; }
-        // bool operator>=( const Iterator& other ) const { return id >= other.id; }
+        bool operator< ( const Iterator& other ) const { return pos <  other.pos; }
+        bool operator> ( const Iterator& other ) const { return pos >  other.pos; }
+        bool operator<=( const Iterator& other ) const { return pos <= other.pos; }
+        bool operator>=( const Iterator& other ) const { return pos >= other.pos; }
 
         T& operator*() { assert(id <= this_->capacity_); return this_->data[id]; }               //TODO find and fix a bug that kills std::copy
         const T& operator*() const { assert(id <= this_->capacity_); return this_->data[id]; }
 
-        // T& operator[]( long long int n ) { return this_->data[id + n]; }
-        // const T& operator[]( long long int n ) const { return this_->data[(id + n) & this_->capacity_]; }
 
         Iterator operator++(){
+            ++pos;
             ++id;
             id &= this_->capacity_;
             if (id == ((this_->end_ + 1) & this_->capacity_))
@@ -197,6 +207,7 @@ public:
 
         Iterator operator++(int){
             Iterator result(*this);
+            ++pos;
             ++id;
             id &= this_->capacity_;
             if (id == ((this_->end_ + 1) & this_->capacity_))
@@ -205,6 +216,7 @@ public:
         }
 
         Iterator operator--(){
+            --pos;
             --id;
             id &= this_->capacity_;
             return (*this);
@@ -212,35 +224,40 @@ public:
 
         Iterator operator--(int){
             Iterator result(*this);
+            --pos;
             --id;
             id &= this_->capacity_;
             return result;
         }
         Iterator operator+(long long int n) const {
             Iterator result(*this);
+            result.pos += n;
             result.id += n;
             result.id &= this_->capacity_;
             return result;
         }
 
-        size_t operator-(const Iterator& other) const {
-            return id - other.id;
+        long long operator-(const Iterator& other) const {
+            return pos - other.pos;
         }
 
         Iterator operator-(long long int n) const { 
             Iterator result(*this);
+            result.pos -= n;
             result.id -= n;
             result.id &= this_->capacity_;
             return result;
         }
 
         Iterator operator+=(long long int n){
+            pos += n;
             id += n;
             id &= this_->capacity_;
             return (*this);
         }
 
         Iterator operator-=(long long int n){
+            pos -= n;
             id -= n;
             id &= this_->capacity_;
             return (*this);
@@ -249,11 +266,11 @@ public:
         
     };
 
-    Iterator begin() { return Iterator( begin_, this); }
-    Iterator end()   { return Iterator( -1, this); }
+    Iterator begin() { return Iterator( begin_, 0, this); }
+    Iterator end()   { return Iterator( end_ + 1, size(), this); }
     
-    Iterator begin() const { return Iterator( begin_, this); }
-    Iterator end()   const { return Iterator( -1, this); }
+    Iterator begin() const { return Iterator( begin_, 0, this); }
+    Iterator end()   const { return Iterator( end_ + 1, size(), this); }
 
     
 

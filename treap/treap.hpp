@@ -176,37 +176,46 @@ private:
 public:
     struct Iterator //TODO add random_access_iterator support
     {
-        using iterator_category = std::bidirectional_iterator_tag;
+        using iterator_category = std::random_access_iterator_tag;
         using difference_type   = std::ptrdiff_t;
         using value_type        = Node;
         
-        Iterator( size_t id=-1, const ObjPool<Node>* pool=nullptr ) : id(id), pool(pool) {}
+        Iterator( size_t id=-1, const Treap* this_=nullptr ) : id(id), this_(this_), pos(0) {}     // WARNING: don't use for non-begin iterator, pos will invalidate
         Iterator( const Iterator &other ) = default;
         
         bool operator==( const Iterator other ) const { return id == other.id; }
         bool operator!=( const Iterator other ) const { return id != other.id; }
 
-        std::pair<Key, Data&> operator*() { Node* v = pool->get(id); \
+        bool operator< ( const Iterator other ) const { return pos <  other.pos; }
+        bool operator> ( const Iterator other ) const { return pos >  other.pos; }
+        bool operator<=( const Iterator other ) const { return pos <= other.pos; }
+        bool operator>=( const Iterator other ) const { return pos >= other.pos; }
+
+        void setPos(size_t pos_) { pos = pos_; }
+        void setId (size_t id_ ) { id  = id_;  }
+
+        std::pair<Key, Data&> operator*() { Node* v = this_->pool.get(id); \
                                             return {v->x, v->val}; }
 
-        const std::pair<const Key, const Data&> operator*() const { Node* v = pool->get(id); \
+        const std::pair<const Key, const Data&> operator*() const { Node* v = this_->pool.get(id); \
                                             return std::make_pair(v->x, v->val); } 
-    
 
+ 
         Iterator operator++() 
         {
             assert(id != -1);
-            Node* v = pool->get(id);
+            ++pos;
+            Node* v = this_->pool.get(id);
             if (v->right != -1)
             {
                 id = v->right;   
-                while ((v = pool->get(id))->left != -1)
+                while ((v = this_->pool.get(id))->left != -1)
                     id = v->left;
                 return (*this);
             }
-            while ((v = pool->get(id))->parent != -1)
+            while ((v = this_->pool.get(id))->parent != -1)
             {
-                if (pool->get(v->parent)->left == id)
+                if (this_->pool.get(v->parent)->left == id)
                 {
                     id = v->parent;
                     return (*this);
@@ -220,18 +229,19 @@ public:
         Iterator operator++(int) 
         {
             assert(id != -1);
-            Node* v = pool->get(id);
+            ++pos;
+            Node* v = this_->pool.get(id);
             Iterator result(*this);
             if (v->right != -1)
             {
                 id = v->right;
-                while ((v = pool->get(id))->left != -1)
+                while ((v = this_->pool.get(id))->left != -1)
                     id = v->left;
                 return result;
             }
-            while ((v = pool->get(id))->parent != -1)
+            while ((v = this_->pool.get(id))->parent != -1)
             {
-                if (pool->get(v->parent)->left == id)
+                if (this_->pool.get(v->parent)->left == id)
                 {
                     id = v->parent;
                     return result;
@@ -245,17 +255,18 @@ public:
         Iterator operator--()
         {
             assert(id != -1);
-            Node* v = pool->get(id);
+            --pos;
+            Node* v = this_->pool.get(id);
             if (v->left != -1)
             {
                 id = v->left;
-                while ((v = pool->get(id))->right != -1)
+                while ((v = this_->pool.get(id))->right != -1)
                     id = v->right;
                 return (*this);
             }
-            while ((v = pool->get(id))->parent != -1)
+            while ((v = this_->pool.get(id))->parent != -1)
             {
-                if (pool->get(v->parent)->right == id)
+                if (this_->pool.get(v->parent)->right == id)
                 {
                     id = v->parent;
                     return (*this);
@@ -269,18 +280,19 @@ public:
         Iterator operator--(int)
         {
             assert(id != -1);
-            Node* v = pool->get(id);
+            --pos;
+            Node* v = this_->pool.get(id);
             Iterator result(*this);
             if (v->left != -1)
             {
                 id = v->left;
-                while ((v = pool->get(id))->right != -1)
+                while ((v = this_->pool.get(id))->right != -1)
                     id = v->right;
                 return result;
             }
-            while ((v = pool->get(id))->parent != -1)
+            while ((v = this_->pool.get(id))->parent != -1)
             {
-                if (pool->get(v->parent)->right == id)
+                if (this_->pool.get(v->parent)->right == id)
                 {
                     id = v->parent;
                     return result;
@@ -291,16 +303,64 @@ public:
             return result;
         }
         
-        
+        Iterator operator+(long long n) const {
+            return this_->kth_elem(pos + n);
+        }
+
+        Iterator operator-(long long n) const {     
+            return this_->kth_elem(pos - n);
+        }
+
+        Iterator& operator+=(long long n) {
+            *this = *this + n;
+            return *this;
+        }
+
+        Iterator& operator-=(long long n) {
+            *this = *this - n;
+            return *this;
+        }
+
+
+        long long operator-(const Iterator &other) const {
+            return pos - other.pos;
+        }
 
         private:
+            size_t pos;
             size_t id;
-            const ObjPool<Node>* pool;
+            const Treap* this_;
     };
 
-    Iterator begin() const { return Iterator(min_vert(root_id), &pool); } 
-    Iterator end()   const { return Iterator(-1, &pool); }
+    Iterator kth_elem(size_t k) const {
+        Iterator result(0, this);
+        result.setPos(k);
+        size_t id = root_id;
+        assert(id != -1);
+        Node *v;
+        while (id != -1){
+            v = pool.get(id);
+            size_t i = getSize(v->left);
+            if (i == k){
+                result.setId(id);
+                return result;
+            }
+            if (k < i)
+                id = v->left;
+            else {
+                k -= i + 1;
+                id = v->right;
+            }   
+        }
+        return end();
+    }
+
+
+
+    Iterator begin() const { return Iterator(min_vert(root_id), this); } 
+    Iterator end()   const { return Iterator(-1, this); }
     
+   
 
     //======================================
     // TREAP interface functions
@@ -317,6 +377,11 @@ public:
     bool  operator==( const Treap &other ) const;
     bool  operator!=( const Treap &other ) const { return !((*this) == other); }
 
+    Data& operator[](size_t n) { return (*(begin() + n)).second; }
+    const Data& operator[](size_t n) const { return *(begin() + n); }
+
+    size_t size() const { if (root_id == -1) return 0; return pool.get(root_id)->size; }
+
     void   insert( Key x, Data val );
     Data*  insert( Key x );
     
@@ -325,8 +390,8 @@ public:
         
     Data* find( Key x ) const;
         
-    void print      ( std::ostream &out ) { print(out, root_id); out << '\n'; }
-    void print_graph( std::ostream &out )
+    void print      ( std::ostream &out ) const { print(out, root_id); out << '\n'; }
+    void print_graph( std::ostream &out ) const
     {
         static size_t dumpn = 0;
         out << "digraph tree" << dumpn++ <<  "{\n"
@@ -336,14 +401,14 @@ public:
         out << "};\n";
     }
     
-    bool graph_check()
+    bool graph_check() const
     {
         if (root_id != -1 && pool.get(root_id)->parent != -1)
-            return false;
+           return false;
         return graph_check(root_id);
     }
 
-    bool graph_check(size_t id)
+    bool graph_check(size_t id) const
     {
         std::set<size_t> S;
         return graph_check(id, S);
@@ -351,15 +416,17 @@ public:
     
 private:
 
-    bool graph_check( size_t id, std::set<size_t> &S );
-    void print_graph( std::ostream &out, size_t id );
-    void print( std::ostream &out, size_t id );
+    bool graph_check( size_t id, std::set<size_t> &S ) const;
+    void print_graph( std::ostream &out, size_t id ) const;
+    void print( std::ostream &out, size_t id ) const;
 
     size_t                    merge( size_t tl_id, size_t tr_id );
     std::pair<size_t, size_t> split( size_t t_id, Key k );
    
     void update( size_t id );
     void insert( Node &node);                       //TODO write it to emplement faster 0 nodes removal
+
+    size_t getSize( size_t v_id ) const { if (v_id == -1) return 0; return pool.get(v_id)->size; }
 
     size_t min_vert( size_t v_id ) const;
     size_t max_vert( size_t v_id ) const;
@@ -407,6 +474,7 @@ bool Treap<Key, Data>::operator==(const Treap<Key, Data> &other) const {
         return false;
     return true;
 }
+
 
 template<typename Key, typename Data>
 void Treap<Key, Data>::insert(Key x, Data val)
@@ -495,7 +563,7 @@ Data* Treap<Key, Data>::find(Key x) const
 }
 
 template<typename Key, typename Data>
-bool Treap<Key, Data>::graph_check(size_t id, std::set<size_t> &S)
+bool Treap<Key, Data>::graph_check(size_t id, std::set<size_t> &S) const
 {
     if (id == -1)
         return true;            
@@ -513,7 +581,7 @@ bool Treap<Key, Data>::graph_check(size_t id, std::set<size_t> &S)
 }
 
 template<typename Key, typename Data>
-void Treap<Key, Data>::print_graph(std::ostream &out, size_t id)
+void Treap<Key, Data>::print_graph(std::ostream &out, size_t id) const
 {
     assert(id != -1);
     Node *v = pool.get(id);
@@ -625,7 +693,7 @@ size_t Treap<Key, Data>::min_vert(size_t v_id) const
 }
 
 template<typename Key, typename Data>
-void Treap<Key, Data>::print(std::ostream &out, size_t id)
+void Treap<Key, Data>::print(std::ostream &out, size_t id) const
 {
     TREAP_CHECK(id);
     if (id == -1) return;

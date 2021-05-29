@@ -169,9 +169,49 @@ void test_treap_3()
     std::cout << "All good!\n"; 
 }
 
+void test_treap_4()
+{
+    Treap<int, int> t;
+    for (int i = 13; i < 20; ++i)
+        t.insert(i, i);
+     
+    t.insert(3, 3);
+    t.insert(1, 1);
+    // t.insert(2, 2);
+    t.insert(4, 4);
+
+    t.insert(41, 41);
+    t.insert(5, 5);
+
+    t.insert(6, 6);
+    t.insert(7, 7);
+
+    t.insert(8, 8);
+    t.insert(9, 9);
+    t.print(std::cerr);
+    //t.print_graph(std::cerr);
+    std::cerr << "size = " << t.size() << '\n';
+
+    for (size_t i = 0; i < t.size(); ++i)
+        std::cerr << "( " << t[i] << " ) ";
+    std::cerr << '\n';
+}
+
+void test_treap_5()
+{
+    Treap<int, int> t;
+    t.insert(1, 1);
+    t.insert(2, 2);
+    t.insert(3, 3);
+    auto iter = t.begin();
+    t.print(std::cerr);
+    iter = t.kth_elem(2);
+    std::cout << "(" << (*iter).first << ", " <<  (*iter).second << ");  ";
+}
+
 
 int main()
-{
+{   
     test_treap();
     std::cerr << "\n\n\n";
 
@@ -181,6 +221,11 @@ int main()
     
     std::cerr << "\n\n\n";
     test_treap_3();
-    return 0;
+
+    std::cerr << "\n\n\n";
+    test_treap_4();
+    
+    std::cerr << "\n\n\n";
+    test_treap_5();
 }
 
