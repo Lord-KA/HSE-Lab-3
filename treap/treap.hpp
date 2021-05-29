@@ -174,7 +174,7 @@ private:
     ObjPool<Node> pool;
 
 public:
-    struct Iterator //TODO add random_access_iterator support
+    struct Iterator 
     {
         using iterator_category = std::random_access_iterator_tag;
         using difference_type   = std::ptrdiff_t;
@@ -368,7 +368,7 @@ public:
     Treap() : root_id(-1) {}
     Treap(const Treap &other) : root_id(other.root_id), pool(other.pool) {}
     Treap(Treap &&other);
-    ~Treap() {}
+    ~Treap() = default;
 
 
     Treap& operator=( const Treap &other );
@@ -390,6 +390,7 @@ public:
         
     Data* find( Key x ) const;
         
+    #ifndef NDEBUG
     void print      ( std::ostream &out ) const { print(out, root_id); out << '\n'; }
     void print_graph( std::ostream &out ) const
     {
@@ -413,6 +414,7 @@ public:
         std::set<size_t> S;
         return graph_check(id, S);
     }
+    #endif  
     
 private:
 
@@ -515,7 +517,7 @@ Data* Treap<Key, Data>::insert(Key x)
 
 
 template<typename Key, typename Data>
-size_t Treap<Key, Data>::erase(size_t id, Key x) //TODO find error
+size_t Treap<Key, Data>::erase(size_t id, Key x) //TODO find bug
 {
     if (id == -1)
         return -1;
