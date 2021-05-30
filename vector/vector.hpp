@@ -13,8 +13,6 @@ private:
     using allocator_type    = Allocator;
     using size_type         = std::size_t;
     using difference_type   = std::ptrdiff_t;
-    //using iterator          = 
-
 
 public:
     //====================================
@@ -27,18 +25,21 @@ public:
     constexpr explicit vector( size_type count,
                                const T& value = T(),
                                const Allocator& alloc = Allocator() );
+    
     constexpr explicit vector( size_type count,
                                const Allocator& alloc = Allocator() );
 
     template< class InputIt >
-    constexpr vector( InputIt first, InputIt last,
+    constexpr vector( InputIt first, InputIt last,              //TODO
                                const Allocator& alloc = Allocator() );
 
-    constexpr vector( const vector& other,
-                      const Allocator& alloc = Allocator() );
+    constexpr vector( const vector& other );
+
+    constexpr vector( const vector& other, const Allocator& alloc );
     
-    constexpr vector( vector&& other,
-                      const Allocator& alloc = Allocator() );
+    constexpr vector( vector&& other );
+
+    constexpr vector( vector&& other, const Allocator& alloc );
 
     constexpr vector( std::initializer_list<T> init,
                       const Allocator& alloc = Allocator() );
@@ -48,7 +49,7 @@ public:
     
     constexpr vector& operator=( const vector& other );
 
-    constexpr vector& operator=( vector&& other ) ;             //TODO add noexcept
+    constexpr vector& operator=( vector&& other ) ;             //TODO add noexcept?
 
     constexpr vector& operator=( std::initializer_list<T> ilist );
     
@@ -105,11 +106,11 @@ public:
         bool operator<=( const iterator &other ) const { return id_ <= other.id_; }
         bool operator>=( const iterator &other ) const { return id_ >= other.id_; }
 
-        T& operator*() { assert(id_ < this_->size()); return this_->data[id_]; }               
-        const T& operator*() const { assert(id_ < this_->size()); return this_->data[id_]; }
+        T& operator*() { assert(id_ < this_->size()); return this_->data_[id_]; }               
+        const T& operator*() const { assert(id_ < this_->size()); return this_->data_[id_]; }
 
-        T& operator[]( long long int n ) { assert(id_ + n < this_->size()); return this_->data[id_ + n]; }
-        const T& operator[]( long long int n ) const { assert(id_ + n < this_->size());return this_->data[id_ + n]; }
+        T& operator[]( long long int n ) { assert(id_ + n < this_->size()); return this_->data_[id_ + n]; }
+        const T& operator[]( long long int n ) const { assert(id_ + n < this_->size());return this_->data_[id_ + n]; }
 
 
         iterator operator++() {
@@ -166,7 +167,6 @@ public:
     private:
         size_t id_;
         const vector* this_;
-
     };
     
     constexpr iterator begin() noexcept { return iterator(0, this); }
@@ -181,7 +181,7 @@ public:
 
     constexpr size_type size() const noexcept { return size_; }
 
-    constexpr size_type max_size() const noexcept { return std::numeric_limits<difference_type>::max(); }
+    constexpr size_type max_size() const noexcept { return allocator_.max_size(); }
 
     constexpr void reserve( size_type new_cap );
 
@@ -193,7 +193,7 @@ public:
     //====================================
     //  Modifiers
 
-    constexpr void clear() noexcept { if (data) delete[] data; size_ = 0; capacity_ = 0; };
+    constexpr void clear() noexcept { if (data_) delete[] data_; size_ = 0; capacity_ = 0; };
 
     constexpr iterator insert( const iterator pos, const T& value );
 
@@ -226,16 +226,92 @@ public:
 
     constexpr void resize( size_type count, const T& value );
 
-    constexpr void swap( vector& other ) noexcept { std::swap(data, other.data); std::swap(capacity_, other.capacity_); std::swap(size_, other.size_); }
+    constexpr void swap( vector& other ) noexcept { std::swap(data_, other.data_); std::swap(capacity_, other.capacity_); std::swap(size_, other.size_); }
 
 
 private:
-    T* data;
+    const Allocator allocator_;
+    T* data_;
     size_type capacity_;
     size_type size_;
 
 };
 
+
+
+
+template< typename T, class Allocator>
+constexpr vector<T, Allocator>::vector() noexcept(noexcept(Allocator())) : data_(nullptr), capacity_(0), size_(0) {}
+
+
+template< typename T, class Allocator>
+constexpr vector<T, Allocator>::vector( const Allocator& alloc ) noexcept : allocator_(alloc), data_(nullptr), capacity_(0), size_(0) {}
+
+
+template< typename T, class Allocator>
+constexpr vector<T, Allocator>::vector( size_type count, const T& value, const Allocator& alloc) : allocator_(alloc), data_(nullptr), capacity_(count), size_(count) {
+    data_ = allocator_.allocate(capacity_);
+    if (!data_)
+        throw std::runtime_error("Failed to allocate memory");
+    for (size_t i = 0; i < capacity_; ++i)          //TODO think of a fasert way?
+        data_[i] = value;
+}
+
+
+template< typename T, class Allocator>
+constexpr vector<T, Allocator>::vector( size_type count, const Allocator& alloc ) : allocator_(alloc), data_(nullptr), capacity_(count), size_(count) {
+    data_ = allocator_.allocate(capacity_);
+    if (!data_)
+        throw std::runtime_error("Failed to allocate memory");
+}
+
+
+template< typename T, class Allocator>                  //TODO
+template< class InputIt >
+constexpr vector<T, Allocator>::vector( InputIt first, InputIt last,
+                               const Allocator& alloc ) : allocator_(alloc), data_(nullptr), capacity_(0), size_(0) {
+    
+
+}
+
+
+template< typename T, class Allocator>
+constexpr vector<T, Allocator>::vector( const vector& other ) : allocator_(other.allocator_), data_(nullptr), capacity_(other.capacity_), size_(other.size_) {
+    data_ = allocator_.allocate(capacity_);
+    if (!data_)
+        throw std::runtime_error("Failed to allocate memory");
+    std::copy(other.begin(), other.end(), data_);
+}
+
+
+template< typename T, class Allocator>
+constexpr vector<T, Allocator>::vector( const vector& other, const Allocator& alloc ) : allocator_(alloc), capacity_(other.capacity_), size_(other.size_) {
+    data_ = allocator_.allocate(capacity_);
+    if (!data_)
+        throw std::runtime_error("Failed to allocate memory");
+    std::copy(other.begin(), other.end(), data_);
+}
+
+
+template< typename T, class Allocator>
+constexpr vector<T, Allocator>::vector( vector&& other ) : allocator_(other.allocator_), data_(other.data_), capacity_(other.capacity_), size_(other.size_) {
+    other.data_ = nullptr;
+    other.size_ = 0;
+    other.capacity_ = 0;
+}
+
+
+template< typename T, class Allocator>
+constexpr vector<T, Allocator>::vector( vector&& other, const Allocator& alloc ) : allocator_(alloc), data_(nullptr), capacity_(other.capacity_), size_(other.size_) {
+    if (alloc != other.allocator_){ //TODO element-wise move (whatever that means)
+        
+    }
+    else {
+        data_ = other.data_;
+        other.size_ = 0;
+        other.capacity_ = 0;
+    }
+}
 
 
 #endif
