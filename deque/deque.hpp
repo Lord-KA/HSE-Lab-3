@@ -5,15 +5,14 @@
 #include <cassert>
 #include <algorithm>
 
-#include <deque>            //DEBUG
-#ifndef NDEBUG
-using poison_t = int;
-static constexpr int POISON = 0xDEADBEEF;
 
+#ifndef NDEBUG                              //WARNING: debug features will fail with types smaller than int
+    
+using poison_t = int;
+static constexpr int POISON = 0xDEADC0DE;
 template<typename T>
 void fillPoison(T* data) {
-    for (size_t k = 0; k < sizeof(*data) / sizeof(poison_t); ++k)
-        reinterpret_cast<poison_t*>(data)[k] = POISON;
+    std::fill(reinterpret_cast<poison_t*>(data), reinterpret_cast<poison_t*>(data) + sizeof(*data) / sizeof(poison_t), POISON);
 }
 
 template<typename T>
@@ -41,16 +40,21 @@ enum class health_error { none, size, empty, nooverflow, overflow };
         dump(std::cerr); \
         std::exit(0); \
     } }
+
 #else
+
 #define DEQUE_CHECK(v) 
+
 #endif
+
+
 
 
 template<typename T>
 class deque{
 private:
     T* data;                    
-    size_t capacity_;           // Capacity is a number power of two - 1; thus pos & capacity_ = pos % capacity_ <=> it takes into account overflow of a tip of deque
+    size_t capacity_;           // Capacity is a number power of two - 1; thus pos & capacity_ == pos % capacity_ <=> it takes into account overflow of a tip of deque
     size_t begin_;              // id of a first element (can be smaller than end_)
     size_t end_;                // id of the last element
     size_t size_;               // independent counter of size of deque
@@ -76,8 +80,10 @@ public:
     bool operator==( const deque &other ) const;
     bool operator!=( const deque &other ) const { return !(*this == other); }
     
-    bool operator==( const std::deque<T> &other ) const;                                //DEBUG
-    bool operator!=( const std::deque<T> &other ) const { return !(*this == other); }   
+    template<class U>
+    bool operator==( const U &other ) const;                                //DEBUG
+    template<class U>
+    bool operator!=( const U &other ) const { return !(*this == other); }   
 
     void refit( size_t capacity_ = -1 );                   //refit() fits data to the len OR reallocates memory  //TODO OR fit to size_
 
@@ -114,8 +120,8 @@ public:
             flag = false;
         }
         out << '\n';
-
     }
+
     health_error HealthCheck() {
         if (size_ > capacity_ + 1)
             return health_error::size;
@@ -156,13 +162,12 @@ public:
 
     //===========================================
     // Iterators
-    friend struct Iterator;
-
+    
     struct Iterator{                //TODO add random_access_iterator support
 
     private:
-        size_t id;
-        size_t pos;
+        size_t id;                   // id in data_
+        size_t pos;                  // pos in deque
         const deque *this_;
 
 
@@ -173,8 +178,8 @@ public:
         using pointer           = T*;
         using reference         = T&;
 
-        Iterator( size_t id, size_t pos, const deque<T>* this_ = nullptr ) : id(id), this_(this_), pos(pos) {}
-        Iterator( const Iterator& other) : id(other.id), this_(other.this_), pos(other.pos) {}
+        Iterator( size_t id, size_t pos, const deque<T>* this_ = nullptr ) : id(id), pos(pos), this_(this_) {}
+        Iterator( const Iterator& other) : id(other.id), pos(other.pos), this_(other.this_) {}
 
         bool operator==( const Iterator& other ) const { return pos == other.pos; }
         bool operator!=( const Iterator& other ) const { return pos != other.pos;  }
@@ -184,7 +189,7 @@ public:
         bool operator<=( const Iterator& other ) const { return pos <= other.pos; }
         bool operator>=( const Iterator& other ) const { return pos >= other.pos; }
 
-        T& operator*() { assert(id <= this_->capacity_); return this_->data[id]; }               //TODO find and fix a bug that kills std::copy
+        T& operator*()             { assert(id <= this_->capacity_); return this_->data[id]; }               //TODO find and fix a bug that kills std::copy
         const T& operator*() const { assert(id <= this_->capacity_); return this_->data[id]; }
 
 
@@ -221,6 +226,7 @@ public:
             id &= this_->capacity_;
             return result;
         }
+
         Iterator operator+(long long int n) const {
             Iterator result(*this);
             result.pos += n;
@@ -264,13 +270,15 @@ public:
     Iterator begin() const { return Iterator( begin_, 0, this); }
     Iterator end()   const { return Iterator( end_ + 1, size(), this); }
 
-    
-
-
 };
 
+
+
+
 template<typename T>
-deque<T>::deque( const deque &other ) : data(nullptr), capacity_(other.capacity_), begin_(other.begin_), end_(other.end_), size_(other.size_) {
+deque<T>::deque( const deque &other ) 
+    : data(nullptr), capacity_(other.capacity_), begin_(other.begin_), end_(other.end_), size_(other.size_) {
+
     if (capacity_){
         data = new T[capacity_ + 1]; 
         std::copy(other.data, other.data + capacity_ + 1, data);
@@ -278,8 +286,11 @@ deque<T>::deque( const deque &other ) : data(nullptr), capacity_(other.capacity_
     DEQUE_CHECK(*this);
 }
 
+
 template<typename T>
-deque<T>::deque( deque &&other )      : capacity_(other.capacity_), data(other.data), begin_(other.begin_), end_(other.end_), size_(other.size_) {
+deque<T>::deque( deque &&other )
+    : capacity_(other.capacity_), data(other.data), begin_(other.begin_), end_(other.end_), size_(other.size_) {
+
     other.data = nullptr;
     other.capacity_ = 0;
     other.begin_    = 0;
@@ -288,8 +299,11 @@ deque<T>::deque( deque &&other )      : capacity_(other.capacity_), data(other.d
     DEQUE_CHECK(*this);
 }
 
+
 template<typename T>
-deque<T>::deque( size_t size) : data(nullptr), capacity_(0), begin_(0), end_(0), size_(0) {
+deque<T>::deque( size_t size)
+    : data(nullptr), capacity_(0), begin_(0), end_(0), size_(0) {
+
     if (!size)
         return;
     size_t i = 2;
@@ -306,6 +320,7 @@ deque<T>::deque( size_t size) : data(nullptr), capacity_(0), begin_(0), end_(0),
 }
 
 
+
 template<typename T>
 void deque<T>::push_back(const T &val) {
     refit(); 
@@ -319,6 +334,7 @@ void deque<T>::push_back(const T &val) {
     ++size_;
     DEQUE_CHECK(*this);
 }
+
 
 template<typename T>
 T deque<T>::pop_back() {
@@ -335,8 +351,10 @@ T deque<T>::pop_back() {
 
     return data[return_pos];
     #endif
+
     DEQUE_CHECK(*this);
 }
+
 
 template<typename T>
 void deque<T>::push_front(const T &val) {
@@ -352,7 +370,7 @@ void deque<T>::push_front(const T &val) {
     DEQUE_CHECK(*this);
 }
 
-// { assert(size_); --size_; begin_ = (begin_ + 1) & capacity_; return data[(begin_ - 1) & capacity_]; }
+
 
 template<typename T>
 T deque<T>::pop_front() {
@@ -372,6 +390,7 @@ T deque<T>::pop_front() {
     DEQUE_CHECK(*this);
 }
 
+
 template<typename T>
 void deque<T>::refit(size_t new_capacity) {
     if ((new_capacity == -1 && (size_ == capacity_ + 1)) || capacity_ == 0)
@@ -384,7 +403,7 @@ void deque<T>::refit(size_t new_capacity) {
             i <<= 1;
         new_capacity = i - 1;
     }
-
+    assert(new_capacity > capacity_);
     T* new_data = new T[new_capacity + 1];
     #ifndef NDEBUG
     for (size_t k = 0; k <= new_capacity; ++k)
@@ -392,14 +411,10 @@ void deque<T>::refit(size_t new_capacity) {
     #endif
     
     if (capacity_){
-        // std::copy(begin(), end(), new_data);     //TODO 
-        size_t i = 0;
-        for (auto elem : *this){
-            new_data[i] = elem;
-            ++i;
-        }
+        std::copy(begin(), end(), new_data);     //TODO 
+        
         #ifndef NDEBUG
-        for (; i <= capacity_; ++i)
+        for (size_t i = size_; i <= capacity_; ++i)
             fillPoison(&new_data[i]);
         #endif
     }
@@ -412,6 +427,7 @@ void deque<T>::refit(size_t new_capacity) {
     DEQUE_CHECK(*this);
 }
 
+
 template<typename T>
 bool deque<T>::operator==( const deque &other ) const {
     if (size_ != other.size_)
@@ -422,8 +438,10 @@ bool deque<T>::operator==( const deque &other ) const {
     return true;
 }
 
+
 template<typename T>
-bool deque<T>::operator==( const std::deque<T> &other ) const {
+template<typename U>
+bool deque<T>::operator==( const U &other ) const {
     if (size_ != other.size())
         return false;
     for (size_t i = 0; i < size_; ++i)
@@ -432,28 +450,32 @@ bool deque<T>::operator==( const std::deque<T> &other ) const {
     return true;
 }
 
+
 template<typename T>
 deque<T>& deque<T>::operator=(const deque &other){
     capacity_ = other.capacity_;
     begin_ = other.begin_;
     end_ = other.end_;
     size_ = other.size_;
+    if (data)
+        delete[] data;
     data = new T[capacity_ + 1];
     std::copy(other.data, other.data + capacity_ + 1, data);
     DEQUE_CHECK(*this);
     return *this;
 }
 
+
 template<typename T>
 deque<T>& deque<T>::operator=(deque &&other){
     capacity_ = std::exchange(other.capacity_, 0);
-    begin_ = std::exchange(other.begin_, 0);
-    end_ = std::exchange(other.end_, 0);
-    size_ = std::exchange(other.size_, 0);
-    data = other.data;
-    other.data = nullptr;
+    begin_    = std::exchange(other.begin_,    0);
+    end_      = std::exchange(other.end_,      0);
+    size_     = std::exchange(other.size_,     0);
+    data      = std::exchange(other.data, nullptr);
     DEQUE_CHECK(*this);
     return *this;
 }
+
 
 #endif

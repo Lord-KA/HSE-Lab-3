@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <random>
+#include <deque>
 #include "gtest/gtest.h"
 
 #include "vector.hpp"
@@ -10,7 +11,7 @@ std::mt19937 rnd(179);
 
 TEST(MemberFunctions, Constructor)
 {
-    deque<long long> D;
+    std::deque<long long> D;
     for (int i = 0; i < rnd() % 100 + 15; ++i){
         D.push_back(rnd());
         if (rnd() % 12)

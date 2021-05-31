@@ -32,8 +32,8 @@ public:
                                const Allocator& alloc = Allocator() );
 
     template< class InputIt >
-    constexpr vector( InputIt first, InputIt last,              
-                               const Allocator& alloc = Allocator() );
+    constexpr explicit vector( InputIt first, InputIt last,              
+                               const Allocator& alloc = Allocator() ) -> vector<typename std::iterator_traits<InputIt>::value_type>; 
 
     constexpr vector( const vector& other );
 
@@ -281,8 +281,8 @@ constexpr vector<T, Allocator>::vector( size_type count, const Allocator& alloc 
 
 template< typename T, class Allocator >                  
 template< class InputIt >
-constexpr vector<T, Allocator>::vector( InputIt first, InputIt last,
-                               const Allocator& alloc ) : allocator_(alloc), data_(nullptr), capacity_(0), size_(0) {
+constexpr explicit vector<T, Allocator>::vector( InputIt first, InputIt last,
+                               const Allocator& alloc ) -> vector<typename std::iterator_traits<InputIt>::value_type> : allocator_(alloc), data_(nullptr), capacity_(0), size_(0) {
 
     for (; first != last; ++first){
         if (size_ == capacity_){
@@ -303,7 +303,7 @@ constexpr vector<T, Allocator>::vector( InputIt first, InputIt last,
                 capacity_ = new_cap;
             }
         }
-        data_[size_] = *first;
+        data_[size_] = (*(first));
         ++size_;
     }
 }

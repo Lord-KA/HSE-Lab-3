@@ -1,15 +1,17 @@
 #include "deque.hpp"
+
 #include <random>
+#include <deque>
 #include "gtest/gtest.h"
 
 
 std::mt19937 rnd(179);
 
-TEST(Basics, PushAndPop)
+template<typename T>
+void PushAndPopTest()
 {
-    for (int p = 0; p < 100; ++p){
-    std::deque<int> STD1;
-    deque<int> D1;
+    std::deque<T> STD1;
+    deque<T> D1;
     for (int i = 0; i < rnd() % 30000 + 150; ++i){
         int a = rnd(), b = rnd();
         D1.push_back(a);
@@ -31,13 +33,15 @@ TEST(Basics, PushAndPop)
     EXPECT_EQ(D1, STD1);
     for (int i = 0; i < D1.size(); ++i)
         EXPECT_EQ(D1[i], STD1[i]);
-    }
+ 
 }
 
-TEST(Basics, CopyAndMove){
-    for (int p = 0; p < 100; ++p){
-    std::deque<int> STD1, STD2;
-    deque<int> D1, D2;
+
+template<typename T>
+void CopyAndMoveTest()
+{
+    std::deque<T> STD1, STD2;
+    deque<T> D1, D2;
     for (int i = 0; i < rnd() % 30000 + 150; ++i){
         int a = rnd(), b = rnd();
         D1.push_back(a);
@@ -69,8 +73,8 @@ TEST(Basics, CopyAndMove){
     STD2.push_front(a);
     STD2.push_back(b);
 
-    deque<int> D3(D2);
-    std::deque<int> STD3(STD2);
+    deque<T> D3(D2);
+    std::deque<T> STD3(STD2);
     EXPECT_EQ(D3, STD3);
     EXPECT_EQ(D3, D2);
 
@@ -84,8 +88,8 @@ TEST(Basics, CopyAndMove){
         ++i;
     }
 
-    deque<int> D4(std::move(D2)), D5, D6;
-    std::deque<int> STD4(std::move(STD2)), STD5, STD6;
+    deque<T> D4(std::move(D2)), D5, D6;
+    std::deque<T> STD4(std::move(STD2)), STD5, STD6;
 
     D5 = std::move(D3);
     STD5 = std::move(STD3);
@@ -99,30 +103,31 @@ TEST(Basics, CopyAndMove){
     EXPECT_EQ(D4, STD4);
     EXPECT_EQ(D5, STD5);   
     EXPECT_EQ(D6, STD6);   
-    }
 }
 
-TEST(Iterators, ForwardIterator){
-    for (int p = 0; p < 100; ++p){
-    deque<int> D1;
+
+template<typename T>
+void ForwardIteratorTest()
+{
+    deque<long> D1;
     for (int i = 0; i < 1000 + rnd() % 3000; ++i){
         D1.push_back(rnd());
         if (rnd() % 2)
             D1.push_front(rnd());
     }
     
-    //D1.dump(std::cerr);
     size_t i = 0;
     for (auto elem : D1){
         EXPECT_EQ(elem, D1[i]);
         ++i;
     }
-    }
 }
 
-TEST(Iterators, BackwardIterator){
-    for (int p = 0; p < 100; ++p){
-    deque<int> D1;
+
+template<typename T>
+void BackwardIteratorTest()
+{
+    deque<T> D1;
     for (int i = 0; i < 1000 + rnd() % 3000; ++i){
         D1.push_back(rnd()); 
         if (rnd() % 2)
@@ -131,18 +136,18 @@ TEST(Iterators, BackwardIterator){
  
     auto iter = D1.end();
     size_t i = D1.size();
-    //D1.dump(std::cerr);
     while (i){
         --iter;
         --i;
         EXPECT_EQ(*iter, D1[i]);
     }
-    }
 }
 
-TEST(Iterators, RandomAccessIterator){
-    for (int p = 0; p < 100; ++p){
-    deque<int> D1;
+
+template<typename T>
+void RandomAccessIteratorTest()
+{
+    deque<long> D1;
     for (int i = 0; i < 1000 + rnd() % 3000; ++i){
         D1.push_back(rnd()); 
         if (rnd() % 2)
@@ -158,7 +163,89 @@ TEST(Iterators, RandomAccessIterator){
         iter2 -= b;
         EXPECT_EQ(*(iter2 - a), D1[D1.size() - a - b]);
     }
-    //D1.dump(std::cerr);
-    }
+}
 
+
+
+
+TEST(Basics, PushAndPop)
+{
+    for (int p = 0; p < 50; ++p){
+        PushAndPopTest<int>();
+        PushAndPopTest<long>();
+        PushAndPopTest<unsigned long long>();
+        PushAndPopTest<double>();
+        PushAndPopTest<float>();
+
+        #ifdef NDEBUG
+        PushAndPopTest<short>();
+        PushAndPopTest<char>();
+        PushAndPopTest<bool>();
+        #endif
+    }
+}
+
+TEST(Basics, CopyAndMove){
+    for (int p = 0; p < 50; ++p){
+        CopyAndMoveTest<int>();
+        CopyAndMoveTest<long>();
+        CopyAndMoveTest<unsigned long long>();
+        CopyAndMoveTest<double>();
+        CopyAndMoveTest<float>();
+
+        #ifdef NDEBUG
+        CopyAndMoveTest<short>();
+        CopyAndMoveTest<char>();
+        CopyAndMoveTest<bool>();
+        #endif
+ 
+    }
+}
+
+TEST(Iterators, ForwardIterator){
+    for (int p = 0; p < 20; ++p){
+        ForwardIteratorTest<int>();
+        ForwardIteratorTest<long>();
+        ForwardIteratorTest<unsigned long long>();
+        ForwardIteratorTest<double>();
+        ForwardIteratorTest<float>();
+
+        #ifdef NDEBUG
+        ForwardIteratorTest<short>();
+        ForwardIteratorTest<char>();
+        ForwardIteratorTest<bool>();
+        #endif
+    }
+}
+
+TEST(Iterators, BackwardIterator){
+    for (int p = 0; p < 20; ++p){
+        BackwardIteratorTest<int>();
+        BackwardIteratorTest<long>();
+        BackwardIteratorTest<unsigned long long>();
+        BackwardIteratorTest<double>();
+        BackwardIteratorTest<float>();
+
+        #ifdef NDEBUG
+        BackwardIteratorTest<short>();
+        BackwardIteratorTest<char>();
+        BackwardIteratorTest<bool>();
+        #endif
+    }
+}
+
+TEST(Iterators, RandomAccessIterator){
+    for (int p = 0; p < 20; ++p){
+        RandomAccessIteratorTest<int>();
+        RandomAccessIteratorTest<long>();
+        RandomAccessIteratorTest<unsigned long long>();
+        RandomAccessIteratorTest<double>();
+        RandomAccessIteratorTest<float>();
+
+        #ifdef NDEBUG
+        RandomAccessIteratorTest<short>();
+        RandomAccessIteratorTest<char>();
+        RandomAccessIteratorTest<bool>();
+        #endif
+    }
 }
