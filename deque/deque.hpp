@@ -13,12 +13,12 @@ static constexpr int POISON = 0xDEADBEEF;
 template<typename T>
 void fillPoison(T* data) {
     for (size_t k = 0; k < sizeof(*data) / sizeof(poison_t); ++k)
-        static_cast<poison_t*>(data)[k] = POISON;
+        reinterpret_cast<poison_t*>(data)[k] = POISON;
 }
 
 template<typename T>
 bool isPoisoned(T* data) {
-    return (static_cast<poison_t*>(data)[0] == POISON);
+    return (reinterpret_cast<poison_t*>(data)[0] == POISON);
 }
 
 enum class health_error { none, size, empty, nooverflow, overflow };
@@ -45,14 +45,6 @@ enum class health_error { none, size, empty, nooverflow, overflow };
 #define DEQUE_CHECK(v) 
 #endif
 
-
-template<class T, class U = T>
-T exchange(T& obj, U&& new_value)
-{
-    T old_value = std::move(obj);
-    obj = std::forward<U>(new_value);
-    return old_value;
-}
 
 template<typename T>
 class deque{
@@ -454,10 +446,10 @@ deque<T>& deque<T>::operator=(const deque &other){
 
 template<typename T>
 deque<T>& deque<T>::operator=(deque &&other){
-    capacity_ = exchange(other.capacity_, 0);
-    begin_ = exchange(other.begin_, 0);
-    end_ = exchange(other.end_, 0);
-    size_ = exchange(other.size_, 0);
+    capacity_ = std::exchange(other.capacity_, 0);
+    begin_ = std::exchange(other.begin_, 0);
+    end_ = std::exchange(other.end_, 0);
+    size_ = std::exchange(other.size_, 0);
     data = other.data;
     other.data = nullptr;
     DEQUE_CHECK(*this);
