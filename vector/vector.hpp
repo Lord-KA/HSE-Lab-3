@@ -79,13 +79,13 @@ public:
     constexpr const T& operator[]( size_type pos ) const;
 
 
-    constexpr T& front()             { assert(size_); return data_[0]; }
+    constexpr T& front()             { assert(size_ != 0); return data_[0]; }
     
-    constexpr const T& front() const { assert(size_); return data_[0]; }
+    constexpr const T& front() const { assert(size_ != 0); return data_[0]; }
 
-    constexpr T& back()              { assert(size_); return data_[size_ - 1]; }
+    constexpr T& back()              { assert(size_ != 0); return data_[size_ - 1]; }
     
-    constexpr const T& back()  const { assert(size_); return data_[size_ - 1]; }
+    constexpr const T& back()  const { assert(size_ != 0); return data_[size_ - 1]; }
     
     //====================================
     //  Iterators
@@ -222,7 +222,7 @@ public:
     template<class... Args>
     constexpr T* emplace_back( Args&&... args);
 
-    constexpr void pop_back() noexcept { assert(size_); --size_; };
+    constexpr void pop_back() noexcept { assert(size_ != 0); --size_; };
 
     constexpr void resize( size_type count );
 
@@ -238,6 +238,7 @@ private:
     size_type size_;
 
 #ifndef NDEBUG
+
 public:
     void dump(std::ostream& out) {
         out << "capacity = " << capacity_ << "\n";
@@ -246,7 +247,6 @@ public:
             out << "{ " << elem << " } ";
         out << '\n';
     }
-
 
 #endif
 };
@@ -278,7 +278,7 @@ constexpr vector<T, Allocator>::vector( size_type count, const Allocator& alloc 
         throw std::runtime_error("Failed to allocate memory");
 }
 
-
+/*
 template< typename T, class Allocator >                  
 template< class InputIt >
 constexpr explicit vector<T, Allocator>::vector( InputIt first, InputIt last,
@@ -307,6 +307,17 @@ constexpr explicit vector<T, Allocator>::vector( InputIt first, InputIt last,
         ++size_;
     }
 }
+*/
+
+template< typename T, class Allocator >                  
+template< class InputIt >
+constexpr vector<T, Allocator>::vector( InputIt first, InputIt last,
+                               const Allocator& alloc ) -> vector<typename std::iterator_traits<InputIt>::value_type> : allocator_(alloc), data_(nullptr), capacity_(0), size_(0) {
+
+    for (; first != last; ++first)
+        push_back(*first);
+}
+
 
 
 template< typename T, class Allocator >

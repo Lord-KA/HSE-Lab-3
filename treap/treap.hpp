@@ -72,6 +72,7 @@ public:
         
         last_free = 0;
     }
+
     ~ObjPool()
     {
         delete [] data;

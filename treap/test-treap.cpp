@@ -4,9 +4,9 @@
 
 template<typename T>
 void IteratorsTest(){
-    Treap<T, T> T1;
+    Treap<int, T> T1;
     for (int i = 0; i < 500 + rnd() % 1500; ++i){
-        T1.insert(static_cast<T>(rnd()), static_cast<T>(rnd()));
+        T1.insert(static_cast<int>(rnd()), static_cast<T>(rnd()));
     }
     auto iter = T1.begin(); 
     for (size_t i = 0; i < T1.size() - 1; ++i){
@@ -23,7 +23,7 @@ void IteratorsTest(){
         iter = T1.begin() + rnd() % 400;
         T1.erase((*iter).first);
     }
-    T *n = T1.insert(static_cast<T>(rnd()));
+    T *n = T1.insert(static_cast<int>(rnd()));
     *n = 102;
 
     iter = T1.begin();

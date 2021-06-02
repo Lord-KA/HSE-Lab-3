@@ -163,7 +163,7 @@ public:
     //===========================================
     // Iterators
     
-    struct Iterator{                //TODO add random_access_iterator support
+    struct Iterator{                
 
     private:
         size_t id;                   // id in data_
@@ -172,7 +172,7 @@ public:
 
 
     public:
-        using iterator_category = std::bidirectional_iterator_tag;
+        using iterator_category = std::random_access_iterator_tag;
         using difference_type   = std::ptrdiff_t;
         using value_type        = T;
         using pointer           = T*;
@@ -189,7 +189,7 @@ public:
         bool operator<=( const Iterator& other ) const { return pos <= other.pos; }
         bool operator>=( const Iterator& other ) const { return pos >= other.pos; }
 
-        T& operator*()             { assert(id <= this_->capacity_); return this_->data[id]; }               //TODO find and fix a bug that kills std::copy
+        T& operator*()             { assert(id <= this_->capacity_); return this_->data[id]; }               
         const T& operator*() const { assert(id <= this_->capacity_); return this_->data[id]; }
 
 
@@ -197,8 +197,6 @@ public:
             ++pos;
             ++id;
             id &= this_->capacity_;
-            // if (id == ((this_->end_ + 1) & this_->capacity_))
-            //     id = -1;
             return (*this);
         }
 
@@ -207,8 +205,6 @@ public:
             ++pos;
             ++id;
             id &= this_->capacity_;
-            // if (id == ((this_->end_ + 1) & this_->capacity_))
-            //     id = -1;
             return result;
         }
 
