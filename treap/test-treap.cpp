@@ -2,14 +2,11 @@
 #include <vector>
 #include "gtest/gtest.h"
 
-
-
-TEST(Basics, Iterators)
-{
-    for (int u = 0; u < 2; ++u){
-    Treap<int, int> T1;
+template<typename T>
+void IteratorsTest(){
+    Treap<T, T> T1;
     for (int i = 0; i < 500 + rnd() % 1500; ++i){
-        T1.insert(rnd(), rnd());
+        T1.insert(static_cast<T>(rnd()), static_cast<T>(rnd()));
     }
     auto iter = T1.begin(); 
     for (size_t i = 0; i < T1.size() - 1; ++i){
@@ -26,7 +23,7 @@ TEST(Basics, Iterators)
         iter = T1.begin() + rnd() % 400;
         T1.erase((*iter).first);
     }
-    int *n = T1.insert(rnd());
+    T *n = T1.insert(static_cast<T>(rnd()));
     *n = 102;
 
     iter = T1.begin();
@@ -41,7 +38,20 @@ TEST(Basics, Iterators)
         EXPECT_EQ((*iter).second, T1[i]);
         ++iter;
     }
+}
+
+
+TEST(Basics, Iterators)
+{
+    for (int u = 0; u < 1; ++u){
+
+        IteratorsTest<int>();
+        //IteratorsTest<long>();
+        //IteratorsTest<unsigned long long>();
+        //IteratorsTest<short>();
+        //IteratorsTest<char>();
     }
+
 }
 
 TEST(Basics, InsertEraseFind)

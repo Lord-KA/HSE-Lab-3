@@ -100,9 +100,21 @@ void CopyAndMoveTest()
     D6 = D5;
     STD6 = STD5;
 
+    a = rnd();
+    D6.push_front(a);
+    STD6.push_front(a);
+    
+
+
     EXPECT_EQ(D4, STD4);
     EXPECT_EQ(D5, STD5);   
     EXPECT_EQ(D6, STD6);   
+    EXPECT_EQ(D4, D4);
+    EXPECT_NE(D4, D6);
+    deque<T> D7(rnd() % 4999), D8(rnd() % 5000);
+    EXPECT_NE(D4, D7);
+    EXPECT_NE(D4, D8);
+    
 }
 
 
@@ -121,6 +133,12 @@ void ForwardIteratorTest()
         EXPECT_EQ(elem, D1[i]);
         ++i;
     }
+    i = 0;
+    for (auto elem : D1){
+        EXPECT_EQ(elem, D1[i]);
+        i++;
+    }
+
 }
 
 
@@ -141,6 +159,14 @@ void BackwardIteratorTest()
         --i;
         EXPECT_EQ(*iter, D1[i]);
     }
+    iter = D1.end();
+    i = D1.size();
+    while (i){
+        iter--;
+        --i;
+        EXPECT_EQ(*iter, D1[i]);
+    }
+
 }
 
 
@@ -155,7 +181,7 @@ void RandomAccessIteratorTest()
     }
     for (int i = 0; i < 100; ++i){
         int a = rnd() % (D1.size() / 2 - 1) + 1;
-        int b = rnd() % (D1.size() / 2 - 1) + 1;
+        int b = -(rnd() % (D1.size() / 2 - 1) + 1);
         auto iter = D1.begin();
         iter += a;
         EXPECT_EQ(*(iter + b), D1[a + b]);
@@ -165,6 +191,21 @@ void RandomAccessIteratorTest()
     }
 }
 
+template<typename T>
+void RefitTest()
+{
+    deque<long> D1;
+    for (int i = 0; i < 1000 + rnd() % 3000; ++i){
+        D1.push_back(rnd()); 
+        if (rnd() % 2)
+            D1.push_front(rnd());
+    }
+
+    D1.refit(rnd() % 5000);
+    D1.refit(rnd() % 5000);
+    D1.refit(rnd() % 5000);
+    D1.refit(rnd() % 5000);
+}
 
 
 
@@ -199,6 +240,21 @@ TEST(Basics, CopyAndMove){
         CopyAndMoveTest<bool>();
         #endif
  
+    }
+}
+
+TEST(Basics, Refit){
+    for (int p = 0; p < 50; ++p){
+        RefitTest<int>();
+        RefitTest<long>();
+        RefitTest<unsigned long long>();
+        RefitTest<double>();
+        RefitTest<float>();
+        #ifdef NDEBUG
+        RefitTest<short>();
+        RefitTest<char>();
+        RefitTest<bool>();
+        #endif
     }
 }
 

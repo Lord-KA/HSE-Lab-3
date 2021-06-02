@@ -1,6 +1,5 @@
-cmake_minimum_required(VERSION 3.17)
+cmake_minimum_required(VERSION 3.14)
 project(linkedList)
-
 
 add_executable(linkedList test-linkedlist.cpp linkedlist.hpp)
 

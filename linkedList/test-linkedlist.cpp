@@ -50,6 +50,8 @@ TEST(Basics, insertAndEraseOnTips){
             L1.erase(a); 
             V1.erase(V1.begin() + a);
         }
+        L1.erase(0);
+        V1.erase(V1.begin());
         EXPECT_EQ(L1, V1);
     }
 }
@@ -109,10 +111,12 @@ TEST(Basics, copyAndMove){
         linkedList<int> L4(std::move(L1));
         L3 = L1;
         EXPECT_EQ(L2, V1);
-        return;
-        EXPECT_EQ(L3, V1);
-        EXPECT_EQ(L4, V1);
-        L5 = std::move(L3);
-        EXPECT_EQ(L5, V1);
-    }
+        L4.insert(10, rnd());
+        L4.insert(10, rnd());
+        L3 = L4;
+        L5 = L4;
+        L5[10] = 10;
+        EXPECT_NE(L4, L2);
+        EXPECT_NE(L4, L5);
+   }
 }
