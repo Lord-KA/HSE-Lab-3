@@ -7,6 +7,9 @@
 #include <type_traits>
 #include <algorithm>
 
+#include <iostream>         //DEBUG
+
+
 
 template< typename T, class Allocator = std::allocator<T> >
 class vector {
@@ -15,6 +18,31 @@ private:
     using allocator_type    = Allocator;
     using size_type         = std::size_t;
     using difference_type   = std::ptrdiff_t;
+
+    template< class InputIt >
+    constexpr void vector_constructor( InputIt first, InputIt last, const std::false_type& /*IsIntegral*/){
+        if (data_)
+            allocator_.deallocate(data_, capacity_);
+        capacity_ = 0;
+        size_ = 0;
+        data_ = nullptr;
+        for (; first != last; ++first)
+            push_back(*first);
+    }
+
+    template< class Integer >
+    constexpr void vector_constructor( Integer n, Integer val, const std::true_type& /*IsIntegral*/){
+        if (data_)
+            allocator_.deallocate(data_, capacity_);
+        capacity_ = n;
+        size_ = n;
+        data_ = allocator_.allocate(capacity_);
+        if (!data_)
+            throw std::runtime_error("Failed to allocate memory");
+        std::fill(data_, data_ + capacity_, val);  
+    }
+
+
 
 public:
     //====================================
@@ -25,7 +53,7 @@ public:
     constexpr explicit vector( const Allocator& alloc ) noexcept;
 
     constexpr explicit vector( size_type count,
-                               const T& value = T(),
+                               const T& value,
                                const Allocator& alloc = Allocator() );
     
     constexpr explicit vector( size_type count,
@@ -33,7 +61,12 @@ public:
 
     template< class InputIt >
     constexpr explicit vector( InputIt first, InputIt last,              
-                               const Allocator& alloc = Allocator() ) -> vector<typename std::iterator_traits<InputIt>::value_type>; 
+                               const Allocator& alloc = Allocator() )  {//-> vector<typename std::decay_t<decltype(*first)>> {// -> vector<typename std::iterator_traits<InputIt>::value_type> {
+        typedef typename std::is_integral<InputIt>::type _Integral;
+        allocator_ = alloc;
+        data_ = nullptr;
+        vector_constructor(first, last, _Integral());
+    }
 
     constexpr vector( const vector& other );
 
@@ -46,12 +79,12 @@ public:
     constexpr vector( std::initializer_list<T> init,                //TODO
                       const Allocator& alloc = Allocator() );
 
-    constexpr ~vector() { allocator_.deallocate(data_, capacity_); }
+    constexpr ~vector() { if (data_) allocator_.deallocate(data_, capacity_); }
 
     
     constexpr vector& operator=( const vector& other );
 
-    constexpr vector& operator=( vector&& other ) noexcept ;
+    constexpr vector& operator=( vector&& other ) noexcept ; //TODO fix memory leak (God knows where)
 
     constexpr vector& operator=( std::initializer_list<T> ilist );  //TODO
     
@@ -97,7 +130,8 @@ public:
         using pointer           = T*;
         using reference         = T&;
 
-        iterator( size_t id = 0, vector* this_ = nullptr ) : id_(id), this_(this_) {}
+    public:
+        iterator( const size_t id, const vector* this_ = nullptr ) : id_(id), this_(this_) {}
         iterator( const iterator& other) = default;
 
         bool operator==( const iterator &other ) const { return id_ == other.id_; }
@@ -171,9 +205,9 @@ public:
         const vector* this_;
     };
     
-    constexpr iterator begin() noexcept { return iterator(0, this); }
+    constexpr iterator begin() const noexcept { return iterator(0, this); }
 
-    constexpr iterator end()   noexcept { return iterator(this->size(), this); }
+    constexpr iterator end()   const noexcept { return iterator(this->size(), this); }
 
 
     //====================================
@@ -183,7 +217,7 @@ public:
 
     constexpr size_type size() const noexcept { return size_; }
 
-    constexpr size_type max_size() const noexcept { return allocator_.max_size(); }
+    constexpr size_type max_size() const noexcept { return allocator_.max_size(); } //TODO check if it is the right way to define max_size
 
     constexpr void reserve( size_type new_cap );
 
@@ -195,7 +229,7 @@ public:
     //====================================
     //  Modifiers
 
-    constexpr void clear() noexcept { if (data_) allocator_.deallocate(data_, capacity_); size_ = 0; capacity_ = 0; }
+    constexpr void clear() noexcept { if (data_) allocator_.deallocate(data_, capacity_); size_ = 0; capacity_ = 0; data_ = nullptr; }
 
     constexpr iterator insert( const iterator pos, const T& value ); //TODO all insert(), emplace() and erase()
 
@@ -220,15 +254,26 @@ public:
     constexpr void push_back( T&& value );
 
     template<class... Args>
-    constexpr T* emplace_back( Args&&... args);
+    constexpr T* emplace_back( Args&&... args);     //TODO
 
     constexpr void pop_back() noexcept { assert(size_ != 0); --size_; };
 
     constexpr void resize( size_type count );
 
-    constexpr void resize( size_type count, const T& value = T() );
+    constexpr void resize( size_type count, const T& value );
 
     constexpr void swap( vector& other ) noexcept { std::swap(data_, other.data_); std::swap(capacity_, other.capacity_); std::swap(size_, other.size_); }
+
+
+    //====================================
+    //  Comparing
+    
+    template<typename Container>
+    constexpr bool operator==( const Container& other ) const;
+    
+
+    template<typename Container>
+    constexpr bool operator!=( const Container& other ) const { return !(*this == other); }
 
 
 private:
@@ -240,6 +285,7 @@ private:
 #ifndef NDEBUG
 
 public:
+
     void dump(std::ostream& out) {
         out << "capacity = " << capacity_ << "\n";
         out << "size     = " << size_ << "\n";
@@ -272,52 +318,11 @@ constexpr vector<T, Allocator>::vector( size_type count, const T& value, const A
 
 
 template< typename T, class Allocator >
-constexpr vector<T, Allocator>::vector( size_type count, const Allocator& alloc ) : allocator_(alloc), data_(nullptr), capacity_(count), size_(count) {
+constexpr vector<T, Allocator>::vector( size_type count, const Allocator& alloc ) : allocator_(alloc), data_(nullptr), capacity_(count), size_(0) {
     data_ = allocator_.allocate(capacity_);
     if (!data_)
         throw std::runtime_error("Failed to allocate memory");
 }
-
-/*
-template< typename T, class Allocator >                  
-template< class InputIt >
-constexpr explicit vector<T, Allocator>::vector( InputIt first, InputIt last,
-                               const Allocator& alloc ) -> vector<typename std::iterator_traits<InputIt>::value_type> : allocator_(alloc), data_(nullptr), capacity_(0), size_(0) {
-
-    for (; first != last; ++first){
-        if (size_ == capacity_){
-            if (!data_){
-                capacity_ = 2;
-                data_ = allocator_.allocate(capacity_);
-                if (!data_)
-                    throw std::runtime_error("Failed to allocate memory");
-            }
-            else {
-                size_t new_cap = capacity_ * 2;
-                T* tmp = allocator_.allocate(new_cap);
-                if (!tmp)
-                    throw std::runtime_error("Failed to allocate memory");
-                std::copy(data_, data_ + capacity_, tmp);           //TODO think if it is more effitient (sometimes?) to make element-wise move
-                allocator_.deallocate(data_, capacity_);
-                data_ = tmp;
-                capacity_ = new_cap;
-            }
-        }
-        data_[size_] = (*(first));
-        ++size_;
-    }
-}
-*/
-
-template< typename T, class Allocator >                  
-template< class InputIt >
-constexpr vector<T, Allocator>::vector( InputIt first, InputIt last,
-                               const Allocator& alloc ) -> vector<typename std::iterator_traits<InputIt>::value_type> : allocator_(alloc), data_(nullptr), capacity_(0), size_(0) {
-
-    for (; first != last; ++first)
-        push_back(*first);
-}
-
 
 
 template< typename T, class Allocator >
@@ -408,6 +413,10 @@ constexpr void vector<T, Allocator>::assign( size_type count, const T& value) {
 template< typename T, class Allocator >
 template< class InputIt >
 constexpr void vector<T, Allocator>::assign( InputIt first, InputIt last) {
+    typedef typename std::is_integral<InputIt>::type _Integral;
+    vector_constructor(first, last, _Integral());
+}
+/*
     size_ = 0;
     for (; first != last; ++first){
         if (size_ == capacity_){
@@ -432,7 +441,7 @@ constexpr void vector<T, Allocator>::assign( InputIt first, InputIt last) {
         ++size_;
     }
 }
-
+*/
 
 template< typename T, class Allocator >
 constexpr T& vector<T, Allocator>::at( size_type pos ) {
@@ -477,7 +486,9 @@ constexpr void vector<T, Allocator>::reserve( size_type new_cap ) {
         }
         data_ = tmp;
         capacity_ = new_cap;
+        return;
     }
+    assert(false);
 }
 
 
@@ -489,6 +500,7 @@ constexpr void vector<T, Allocator>::shrink_to_fit() {
             throw std::runtime_error("Failed to allocate memory");
 
         std::copy(data_, data_ + size_, tmp);
+        assert(data_);
         allocator_.deallocate(data_, capacity_);
         data_ = tmp;
         capacity_ = size_;
@@ -498,13 +510,13 @@ constexpr void vector<T, Allocator>::shrink_to_fit() {
 
 template< typename T, class Allocator >             //TODO
 constexpr typename vector<T, Allocator>::iterator vector<T, Allocator>::insert( const vector<T, Allocator>::iterator pos, const T& value ) {
-    
+    assert(false);  //DEBUG
 }
 
 
 template< typename T, class Allocator >
 constexpr void vector<T, Allocator>::push_back( const T& value ) {
-    if (size_ == capacity_ || !capacity_){
+    if ((size_ == capacity_) || !capacity_){
         if (!capacity_)
             capacity_ = 1;
         reserve(capacity_ * 2);
@@ -557,7 +569,8 @@ constexpr void vector<T, Allocator>::resize( size_type count ) {
         std::copy(data_, data_ + size_, tmp);
     }
 
-    allocator_.deallocate(data_, capacity_);
+    if (data_)
+       allocator_.deallocate(data_, capacity_);
     data_ = tmp;
     capacity_ = count;
 }
@@ -579,11 +592,28 @@ constexpr void vector<T, Allocator>::resize( size_type count, const T& value ) {
         std::fill(tmp + size_, tmp + count, value);
     }
 
-    allocator_.deallocate(data_, capacity_);
+    if (data_)
+        allocator_.deallocate(data_, capacity_);
     data_ = tmp;
     capacity_ = count;
 }
 
 
+template< typename T, class Allocator >
+template<typename Container>
+constexpr bool vector<T, Allocator>::operator==( const Container& other ) const {
+    if (size() != other.size())
+        return false;
+    auto iter_this = begin();
+    auto iter_other = other.begin();
+    while (iter_this != end()){
+        if (*iter_this != *iter_other)
+            return false; 
+        ++iter_this; ++iter_other;
+    }
+
+    return true;
+
+}
 
 #endif
