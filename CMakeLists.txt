@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.14)
 project(Lab-3)
 
-set(CMAKE_CXX_COMPILER_COVERAGE "/usr/bin/clang++" CACHE string "clang compiler" FORCE) #TODO check if clang is present when COVERAGE needed
+set(CMAKE_CXX_COMPILER "/usr/bin/clang++" CACHE string "clang compiler" FORCE) #TODO check if clang is present when COVERAGE needed
                 
 
 set(CMAKE_CXX_STANDART 20)

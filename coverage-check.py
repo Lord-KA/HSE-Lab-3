@@ -52,7 +52,7 @@ def main(argv):
         result += '\n\n\n'
         result += show[show.find('/' + name + '/' + name.lower() + ".h"):]
 
-    #subprocess.check_output("rm ./out.profdata", shell=True, universal_newlines=True)
+    subprocess.check_output("rm ./out.profdata", shell=True, universal_newlines=True)
     print(result)
 
 if __name__ == "__main__":

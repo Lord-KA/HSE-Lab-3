@@ -43,7 +43,7 @@ void CopyAndMoveTest()
     std::deque<T> STD1, STD2;
     deque<T> D1, D2;
     for (int i = 0; i < rnd() % 30000 + 150; ++i){
-        int a = rnd(), b = rnd();
+        T a = rnd(), b = rnd();
         D1.push_back(a);
         STD1.push_back(a);
         D1.push_front(b);
@@ -121,11 +121,11 @@ void CopyAndMoveTest()
 template<typename T>
 void ForwardIteratorTest()
 {
-    deque<long> D1;
+    deque<T> D1;
     for (int i = 0; i < 1000 + rnd() % 3000; ++i){
-        D1.push_back(rnd());
+        D1.push_back(static_cast<T>(rnd()));
         if (rnd() % 2)
-            D1.push_front(rnd());
+            D1.push_front(static_cast<T>(rnd()));
     }
     
     size_t i = 0;
@@ -147,9 +147,9 @@ void BackwardIteratorTest()
 {
     deque<T> D1;
     for (int i = 0; i < 1000 + rnd() % 3000; ++i){
-        D1.push_back(rnd()); 
+        D1.push_back(static_cast<T>(rnd())); 
         if (rnd() % 2)
-            D1.push_front(rnd());
+            D1.push_front(static_cast<T>(rnd()));
     }
  
     auto iter = D1.end();
@@ -173,11 +173,11 @@ void BackwardIteratorTest()
 template<typename T>
 void RandomAccessIteratorTest()
 {
-    deque<long> D1;
+    deque<T> D1;
     for (int i = 0; i < 1000 + rnd() % 3000; ++i){
-        D1.push_back(rnd()); 
+        D1.push_back(static_cast<T>(rnd())); 
         if (rnd() % 2)
-            D1.push_front(rnd());
+            D1.push_front(static_cast<T>(rnd()));
     }
     for (int i = 0; i < 100; ++i){
         int a = rnd() % (D1.size() / 2 - 1) + 1;
@@ -192,13 +192,44 @@ void RandomAccessIteratorTest()
 }
 
 template<typename T>
+void InsertAndEraseTest()
+{
+    std::deque<T> STD1;
+    deque<T> D1;
+    for (int i = 0; i < rnd() % 8000 + 500; ++i){
+        T a = rnd(), b = rnd();
+        D1.push_back(a);
+        STD1.push_back(a);
+        D1.push_front(b);
+        STD1.push_front(b);
+    }
+ 
+    EXPECT_EQ(D1, STD1);
+    for (int i = 0; i < 300; ++i){
+        int a = rnd() % (D1.size() / 2 - 1) + 1;
+        T b = rnd();
+        D1.insert(a, b);
+        STD1.insert(STD1.begin() + a, b);
+    }
+    EXPECT_EQ(D1, STD1);
+    for (int i = 0; i < 300; ++i){
+        int a = rnd() % (D1.size() / 2 - 1) + 1;
+        D1.erase(a);
+        STD1.erase(STD1.begin() + a);
+
+    }
+    EXPECT_EQ(D1, STD1);
+}
+
+
+template<typename T>
 void RefitTest()
 {
-    deque<long> D1;
+    deque<T> D1;
     for (int i = 0; i < 1000 + rnd() % 3000; ++i){
         D1.push_back(rnd()); 
         if (rnd() % 2)
-            D1.push_front(rnd());
+            D1.push_front(static_cast<T>(rnd()));
     }
 
     D1.refit(rnd() % 5000);
@@ -258,6 +289,24 @@ TEST(Basics, Refit){
     }
 }
 
+TEST(Basics, InsertAndErase) {
+    for (int p = 0; p < 20; ++p){
+        InsertAndEraseTest<int>();
+        InsertAndEraseTest<long>();
+        InsertAndEraseTest<unsigned long long>();
+        InsertAndEraseTest<double>();
+        InsertAndEraseTest<float>();
+        
+        #ifdef NDEBUG
+        InsertAndEraseTest<short>();
+        InsertAndEraseTest<char>();
+        InsertAndEraseTest<bool>();
+        #endif
+    
+    
+    }
+}
+
 TEST(Iterators, ForwardIterator){
     for (int p = 0; p < 20; ++p){
         ForwardIteratorTest<int>();
@@ -298,10 +347,5 @@ TEST(Iterators, RandomAccessIterator){
         RandomAccessIteratorTest<double>();
         RandomAccessIteratorTest<float>();
 
-        #ifdef NDEBUG
-        RandomAccessIteratorTest<short>();
-        RandomAccessIteratorTest<char>();
-        RandomAccessIteratorTest<bool>();
-        #endif
-    }
+}
 }

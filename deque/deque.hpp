@@ -85,7 +85,10 @@ public:
     template<class U>
     bool operator!=( const U &other ) const { return !(*this == other); }   
 
-    void refit( size_t capacity_ = -1 );                   //refit() fits data to the len OR reallocates memory  //TODO OR fit to size_
+    void refit( size_t capacity_ = -1 );                   //refit() fits data to the len OR reallocates memory 
+
+    void insert( size_t pos, const T& value );
+    T erase( size_t pos );
 
           T& operator[]( size_t pos )       { return data[(pos + begin_) & capacity_]; }              
     const T& operator[]( size_t pos ) const { return data[(pos + begin_) & capacity_]; }  
@@ -384,6 +387,59 @@ T deque<T>::pop_front() {
     return data[return_pos];
     #endif
     DEQUE_CHECK(*this)
+}
+
+
+template<typename T>
+void deque<T>::insert(size_t pos, const T& value) {
+    size_t new_capacity = capacity_;
+    if (size_ == capacity_ + 1)
+        new_capacity = ((capacity_ + 1) << 1) - 1;    
+    T* new_data = new T[new_capacity + 1];
+
+    #ifndef NDEBUG
+    for (size_t k = 0; k <= new_capacity; ++k)
+        fillPoison(&new_data[k]);
+    #endif
+
+    std::copy(begin(), begin() + pos, new_data);
+    new_data[pos] = value;
+    std::copy(begin() + pos, end(), new_data + pos + 1);
+
+    begin_ = 0;
+    end_ = size_;
+    ++size_;
+    capacity_ = new_capacity;
+    if (data)
+        delete[] data;
+    data = new_data;
+
+    DEQUE_CHECK(*this)
+}
+
+
+template<typename T>
+T deque<T>::erase(size_t pos) {
+    T* new_data = new T[capacity_ + 1];
+    T result = data[pos];
+    #ifndef NDEBUG
+    for (size_t k = 0; k <= capacity_; ++k)
+        fillPoison(&new_data[k]);
+    #endif
+
+    std::copy(begin(), begin() + pos, new_data);
+    std::copy(begin() + pos + 1, end(), new_data + pos);
+
+    begin_ = 0;
+    end_ = size_ - 2;
+    --size_;
+
+    if (data)
+        delete[] data;
+    data = new_data;
+
+    DEQUE_CHECK(*this)
+    return result;
 }
 
 
