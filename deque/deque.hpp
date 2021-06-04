@@ -85,7 +85,11 @@ public:
     template<class U>
     bool operator!=( const U &other ) const { return !(*this == other); }   
 
-    void refit( size_t capacity_ = -1 );                   //refit() fits data to the len OR reallocates memory  //TODO OR fit to size_
+    void refit( size_t capacity_ = -1 );                   //refit() fits data to the len OR reallocates memory 
+
+    void insert( size_t pos, const T& value );
+    T erase( size_t pos );
+
 
           T& operator[]( size_t pos )       { return data[(pos + begin_) & capacity_]; }              
     const T& operator[]( size_t pos ) const { return data[(pos + begin_) & capacity_]; }  
@@ -163,7 +167,7 @@ public:
     //===========================================
     // Iterators
     
-    struct Iterator{                //TODO add random_access_iterator support
+    struct Iterator{                
 
     private:
         size_t id;                   // id in data_
@@ -172,7 +176,9 @@ public:
 
 
     public:
-        using iterator_category = std::bidirectional_iterator_tag;
+      
+        using iterator_category = std::random_access_iterator_tag;
+      
         using difference_type   = std::ptrdiff_t;
         using value_type        = T;
         using pointer           = T*;
@@ -189,7 +195,8 @@ public:
         bool operator<=( const Iterator& other ) const { return pos <= other.pos; }
         bool operator>=( const Iterator& other ) const { return pos >= other.pos; }
 
-        T& operator*()             { assert(id <= this_->capacity_); return this_->data[id]; }               //TODO find and fix a bug that kills std::copy
+        T& operator*()             { assert(id <= this_->capacity_); return this_->data[id]; }               
+
         const T& operator*() const { assert(id <= this_->capacity_); return this_->data[id]; }
 
 
@@ -197,8 +204,7 @@ public:
             ++pos;
             ++id;
             id &= this_->capacity_;
-            if (id == ((this_->end_ + 1) & this_->capacity_))
-                id = -1;
+
             return (*this);
         }
 
@@ -207,8 +213,7 @@ public:
             ++pos;
             ++id;
             id &= this_->capacity_;
-            if (id == ((this_->end_ + 1) & this_->capacity_))
-                id = -1;
+
             return result;
         }
 
@@ -283,7 +288,8 @@ deque<T>::deque( const deque &other )
         data = new T[capacity_ + 1]; 
         std::copy(other.data, other.data + capacity_ + 1, data);
     }
-    DEQUE_CHECK(*this);
+
+    DEQUE_CHECK(*this)
 }
 
 
@@ -296,7 +302,8 @@ deque<T>::deque( deque &&other )
     other.begin_    = 0;
     other.end_      = 0;
     other.size_     = 0;
-    DEQUE_CHECK(*this);
+    
+    DEQUE_CHECK(*this)
 }
 
 
@@ -316,7 +323,8 @@ deque<T>::deque( size_t size)
     for (size_t j = 0; j <= capacity_; ++j)
         fillPoison(&data[j]);
     #endif
-    DEQUE_CHECK(*this);
+      
+    DEQUE_CHECK(*this)
 }
 
 
@@ -332,7 +340,8 @@ void deque<T>::push_back(const T &val) {
         data[end_] = val; 
     }
     ++size_;
-    DEQUE_CHECK(*this);
+
+    DEQUE_CHECK(*this)
 }
 
 
@@ -352,7 +361,7 @@ T deque<T>::pop_back() {
     return data[return_pos];
     #endif
 
-    DEQUE_CHECK(*this);
+    DEQUE_CHECK(*this)
 }
 
 
@@ -367,7 +376,8 @@ void deque<T>::push_front(const T &val) {
         data[begin_] = val; 
     }
     ++size_;
-    DEQUE_CHECK(*this);
+
+    DEQUE_CHECK(*this)
 }
 
 
@@ -387,44 +397,108 @@ T deque<T>::pop_front() {
 
     return data[return_pos];
     #endif
-    DEQUE_CHECK(*this);
+ 
+    DEQUE_CHECK(*this)
+}
+
+
+template<typename T>
+void deque<T>::insert(size_t pos, const T& value) {
+    size_t new_capacity = capacity_;
+    if (size_ == capacity_ + 1)
+        new_capacity = ((capacity_ + 1) << 1) - 1;    
+    T* new_data = new T[new_capacity + 1];
+
+    #ifndef NDEBUG
+    for (size_t k = 0; k <= new_capacity; ++k)
+        fillPoison(&new_data[k]);
+    #endif
+
+    std::copy(begin(), begin() + pos, new_data);
+    new_data[pos] = value;
+    std::copy(begin() + pos, end(), new_data + pos + 1);
+
+    begin_ = 0;
+    end_ = size_;
+    ++size_;
+    capacity_ = new_capacity;
+    if (data)
+        delete[] data;
+    data = new_data;
+
+    DEQUE_CHECK(*this)
+}
+
+
+template<typename T>
+T deque<T>::erase(size_t pos) {
+    T* new_data = new T[capacity_ + 1];
+    T result = data[pos];
+    #ifndef NDEBUG
+    for (size_t k = 0; k <= capacity_; ++k)
+        fillPoison(&new_data[k]);
+    #endif
+
+    std::copy(begin(), begin() + pos, new_data);
+    std::copy(begin() + pos + 1, end(), new_data + pos);
+
+    begin_ = 0;
+    end_ = size_ - 2;
+    --size_;
+
+    if (data)
+        delete[] data;
+    data = new_data;
+
+    DEQUE_CHECK(*this)
+    return result;
 }
 
 
 template<typename T>
 void deque<T>::refit(size_t new_capacity) {
-    if ((new_capacity == -1 && (size_ == capacity_ + 1)) || capacity_ == 0)
+    if (new_capacity == -1 && ((size_ == capacity_ + 1) || capacity_ == 0))
         new_capacity = ((capacity_ + 1) << 1) - 1;    
     else if (new_capacity == -1)
         return;
     else {
-       size_t i = 2;
+        size_t i = 2;
+
         while (i < new_capacity)
             i <<= 1;
         new_capacity = i - 1;
     }
-    assert(new_capacity > capacity_);
+
+    if (new_capacity == capacity_)
+        return;
+    
     T* new_data = new T[new_capacity + 1];
+    
     #ifndef NDEBUG
     for (size_t k = 0; k <= new_capacity; ++k)
         fillPoison(&new_data[k]);
     #endif
-    
-    if (capacity_){
-        std::copy(begin(), end(), new_data);     //TODO 
-        
-        #ifndef NDEBUG
-        for (size_t i = size_; i <= capacity_; ++i)
-            fillPoison(&new_data[i]);
-        #endif
-    }
 
+    if (new_capacity < size_){
+        std::copy(begin(), begin() + (new_capacity + 1), new_data);
+        size_ = new_capacity + 1;
+    }
+    else 
+        std::copy(begin(), end(), new_data);     
+    
     begin_ = 0;
-    end_ = capacity_;
+    if (size_)
+        end_ = size_ - 1;
+    else
+        end_ = 0;
     capacity_ = new_capacity;
     delete[] data;
     data = new_data;
-    DEQUE_CHECK(*this);
+ 
+
+
+
+    DEQUE_CHECK(*this)
 }
 
 
@@ -461,7 +535,9 @@ deque<T>& deque<T>::operator=(const deque &other){
         delete[] data;
     data = new T[capacity_ + 1];
     std::copy(other.data, other.data + capacity_ + 1, data);
-    DEQUE_CHECK(*this);
+
+    DEQUE_CHECK(*this)
+
     return *this;
 }
 
@@ -473,7 +549,9 @@ deque<T>& deque<T>::operator=(deque &&other){
     end_      = std::exchange(other.end_,      0);
     size_     = std::exchange(other.size_,     0);
     data      = std::exchange(other.data, nullptr);
-    DEQUE_CHECK(*this);
+
+    DEQUE_CHECK(*this)
+
     return *this;
 }
 
