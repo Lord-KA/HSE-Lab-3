@@ -43,7 +43,9 @@ void CopyAndMoveTest()
     std::deque<T> STD1, STD2;
     deque<T> D1, D2;
     for (int i = 0; i < rnd() % 30000 + 150; ++i){
+
         T a = rnd(), b = rnd();
+
         D1.push_back(a);
         STD1.push_back(a);
         D1.push_front(b);
@@ -114,7 +116,6 @@ void CopyAndMoveTest()
     deque<T> D7(rnd() % 4999), D8(rnd() % 5000);
     EXPECT_NE(D4, D7);
     EXPECT_NE(D4, D8);
-    
 }
 
 
@@ -138,7 +139,6 @@ void ForwardIteratorTest()
         EXPECT_EQ(elem, D1[i]);
         i++;
     }
-
 }
 
 
@@ -347,5 +347,5 @@ TEST(Iterators, RandomAccessIterator){
         RandomAccessIteratorTest<double>();
         RandomAccessIteratorTest<float>();
 
-}
+    }
 }

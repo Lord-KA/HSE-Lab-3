@@ -13,6 +13,7 @@ TEST(Manual, Constructors)
 {
     deque<int> D;
     for (int i = 0; i < 40; ++i){
+
         D.push_back(rnd());
         if (rnd() % 12)
             D.push_front(rnd());

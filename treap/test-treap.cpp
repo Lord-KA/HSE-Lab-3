@@ -2,6 +2,7 @@
 #include <vector>
 #include "gtest/gtest.h"
 
+
 template<typename T>
 void IteratorsTest(){
     Treap<int, T> T1;
@@ -24,6 +25,7 @@ void IteratorsTest(){
         T1.erase((*iter).first);
     }
     T *n = T1.insert(static_cast<int>(rnd()));
+
     *n = 102;
 
     iter = T1.begin();
@@ -51,7 +53,6 @@ TEST(Basics, Iterators)
         //IteratorsTest<short>();
         //IteratorsTest<char>();
     }
-
 }
 
 TEST(Basics, InsertEraseFind)

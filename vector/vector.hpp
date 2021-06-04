@@ -53,7 +53,9 @@ public:
     constexpr explicit vector( const Allocator& alloc ) noexcept;
 
     constexpr explicit vector( size_type count,
+
                                const T& value,
+
                                const Allocator& alloc = Allocator() );
     
     constexpr explicit vector( size_type count,
@@ -67,6 +69,7 @@ public:
         data_ = nullptr;
         vector_constructor(first, last, _Integral());
     }
+
 
     constexpr vector( const vector& other );
 
@@ -120,6 +123,7 @@ public:
     
     constexpr const T& back()  const { assert(size_ != 0); return data_[size_ - 1]; }
     
+  
     //====================================
     //  Iterators
     
@@ -228,7 +232,7 @@ public:
 
     //====================================
     //  Modifiers
-
+  
     constexpr void clear() noexcept { if (data_) allocator_.deallocate(data_, capacity_); size_ = 0; capacity_ = 0; data_ = nullptr; }
 
     constexpr iterator insert( const iterator pos, const T& value ); //TODO all insert(), emplace() and erase()
@@ -285,7 +289,7 @@ private:
 #ifndef NDEBUG
 
 public:
-
+  
     void dump(std::ostream& out) {
         out << "capacity = " << capacity_ << "\n";
         out << "size     = " << size_ << "\n";
@@ -416,32 +420,7 @@ constexpr void vector<T, Allocator>::assign( InputIt first, InputIt last) {
     typedef typename std::is_integral<InputIt>::type _Integral;
     vector_constructor(first, last, _Integral());
 }
-/*
-    size_ = 0;
-    for (; first != last; ++first){
-        if (size_ == capacity_){
-            if (!data_){
-                capacity_ = 2;
-                data_ = allocator_.allocate(capacity_);
-                if (!data_)
-                    throw std::runtime_error("Failed to allocate memory");
-            }
-            else {
-                size_t new_cap = capacity_ * 2;
-                T* tmp = allocator_.allocate(new_cap);
-                if (!tmp)
-                    throw std::runtime_error("Failed to allocate memory");
-                std::copy(data_, data_ + capacity_, tmp);           //TODO think if it is more effitient (sometimes?) to make element-wise move
-                allocator_.deallocate(data_, capacity_);
-                data_ = tmp;
-                capacity_ = new_cap;
-            }
-        }
-        data_[size_] = *first;
-        ++size_;
-    }
-}
-*/
+
 
 template< typename T, class Allocator >
 constexpr T& vector<T, Allocator>::at( size_type pos ) {
