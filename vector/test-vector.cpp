@@ -283,6 +283,10 @@ TEST(Manual, Modifiers)
     EXPECT_EQ(V1, STDV1);
     EXPECT_EQ(V2, STDV2);
     EXPECT_NE(V1, V2);
+} 
 
 
-}   
+int main(int argc, char* argv[]) {
+    ::testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
+}

@@ -120,3 +120,9 @@ TEST(Basics, copyAndMove){
         EXPECT_NE(L4, L5);
    }
 }
+
+
+int main(int argc, char* argv[]) {
+    ::testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
+}

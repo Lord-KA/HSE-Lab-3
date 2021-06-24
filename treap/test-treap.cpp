@@ -121,3 +121,9 @@ TEST(Basics, CopyMove)
         EXPECT_EQ(T4[i], V1[i]);
     }
 }
+
+
+int main(int argc, char* argv[]) {
+    ::testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
+}
