@@ -215,6 +215,31 @@ TEST(Manual, Capacity)
     EXPECT_EQ(V1, STDV1);
 }
 
+TEST(Manual, Resize)
+{
+    vector<int> V1;
+    std::vector<int> STDV1;
+    for (int i = 0; i < 10 + rnd() % 100; ++i){
+        int q = rnd();
+        V1.push_back(q);
+        STDV1.push_back(q);
+    }
+    EXPECT_EQ(V1.size(), STDV1.size());
+    EXPECT_EQ(V1, STDV1);
+    
+    int q = rnd() % 1000;
+    V1.resize(200 + q);
+    STDV1.resize(200 + q);
+    EXPECT_EQ(V1.size(), STDV1.size());
+    EXPECT_EQ(V1, STDV1);
+
+    q = rnd() % 200;
+    V1.resize(q);
+    STDV1.resize(q);
+    EXPECT_EQ(V1.size(), STDV1.size());
+    EXPECT_EQ(V1, STDV1);
+}
+
 TEST(Manual, Modifiers)
 {
     deque<long> D;
@@ -240,13 +265,8 @@ TEST(Manual, Modifiers)
     V2 = V1;
     STDV2 = STDV1;
 
-    /*          //TODO write insert and tests for insert() (and emplace() and erase())
-    V2.insert(V2.begin() + a, b);
-    STDV2.insert(STDV2.begin() + a, b);
-    EXPECT_EQ(V2, STDV2);
-    EXPECT_NE(V2, V1);
-    */
-    
+              //TODO write insert and tests for insert() (and emplace() and erase())
+   
     V2.push_back(b);
     STDV2.push_back(b);
     
@@ -256,13 +276,11 @@ TEST(Manual, Modifiers)
     STDV2.pop_back();
     EXPECT_EQ(V2, V1);
     
-    //V2.resize(V2.size() + a);     //TODO fix resize
-    //STDV2.resize(STDV2.size() + a);
     EXPECT_EQ(V2, STDV2);
 
     V2.resize(V2.size() + a, b);
     STDV2.resize(STDV2.size() + a, b);
-    //EXPECT_EQ(V2, STDV2);
+    EXPECT_EQ(V2, STDV2);
 
     V2 = V1;
     STDV2 = STDV1;
@@ -270,7 +288,7 @@ TEST(Manual, Modifiers)
     a = rnd() % 600;
     V2.resize(V2.size() - a);
     STDV2.resize(STDV2.size() - a);
-    // EXPECT_EQ(V2, STDV2);
+    EXPECT_EQ(V2, STDV2);
 
     V2 = V1;
     STDV2 = STDV1;
@@ -283,7 +301,57 @@ TEST(Manual, Modifiers)
     EXPECT_EQ(V1, STDV1);
     EXPECT_EQ(V2, STDV2);
     EXPECT_NE(V1, V2);
+
+    V3 = V2;
+    V3.push_back(13);
+    V2 = V3;
+    vector V4 = std::move(V3);
+    EXPECT_EQ(V2,V4);
 } 
+
+TEST(Manual, Insert)
+{
+    vector<int> V2;
+    std::vector<int> STDV2;
+    for (size_t i = 0; i < 10; ++i){
+        int q = rnd();
+        V2.push_back(q);
+        STDV2.push_back(q);
+    }
+    EXPECT_EQ(V2, STDV2);
+    size_t a = 3;
+    int b = 3e6;
+    size_t c = 4;
+    V2.insert(V2.begin() + a, b);
+    STDV2.insert(STDV2.begin() + a, b);
+    EXPECT_EQ(V2, STDV2);
+
+    V2.insert(V2.begin() + a, c, b);
+    STDV2.insert(STDV2.begin() + a, c, b);
+    EXPECT_EQ(V2, STDV2);
+}
+
+TEST(Manual, Erase)
+{
+    vector<int> V2;
+    std::vector<int> STDV2;
+    for (size_t i = 0; i < 10; ++i){
+        int q = rnd();
+        V2.push_back(q);
+        STDV2.push_back(q);
+    }
+    EXPECT_EQ(V2, STDV2);
+    size_t a = 3;
+    size_t c = 5;
+    V2.erase(V2.begin() + a);
+    STDV2.erase(STDV2.begin() + a);
+    EXPECT_EQ(V2, STDV2);
+
+    V2.erase(V2.begin() + a, V2.begin() + c);
+    STDV2.erase(STDV2.begin() + a, STDV2.begin() + c);
+    EXPECT_EQ(V2, STDV2);
+}
+
 
 
 int main(int argc, char* argv[]) {
