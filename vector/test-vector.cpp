@@ -321,14 +321,46 @@ TEST(Manual, Insert)
     EXPECT_EQ(V2, STDV2);
     size_t a = 3;
     int b = 3e6;
-    size_t c = 4;
+    int c = 4;
     V2.insert(V2.begin() + a, b);
     STDV2.insert(STDV2.begin() + a, b);
     EXPECT_EQ(V2, STDV2);
 
+
     V2.insert(V2.begin() + a, c, b);
     STDV2.insert(STDV2.begin() + a, c, b);
     EXPECT_EQ(V2, STDV2);
+
+
+    
+    vector<int> V3;
+    std::vector<int> STDV3;
+    for (size_t i = 0; i < 10; ++i){
+        int q = rnd();
+        V3.push_back(q);
+        STDV3.push_back(q);
+    }
+    EXPECT_EQ(V3, STDV3);
+    EXPECT_EQ(V2, STDV2);
+    a = 5;
+    
+    V3.insert(V3.begin() + a, V2.begin() + 3, V2.begin() + 5);
+    STDV3.insert(STDV3.begin() + a, STDV2.begin() + 3, STDV2.begin() + 5);
+    EXPECT_EQ(V3, STDV3);
+
+    vector<int> V4;
+    std::vector<int> STDV4;
+    for (size_t i = 0; i < 10; ++i){
+        int q = rnd();
+        V4.push_back(q);
+        STDV4.push_back(q);
+    }
+    EXPECT_EQ(V4, STDV4);
+    EXPECT_EQ(V3, STDV3);
+    a = 7;
+    V4.insert(V4.begin() + a, {1, 2, 3, 4, 5});
+    STDV4.insert(STDV4.begin() + a, {1, 2, 3, 4, 5});
+    EXPECT_EQ(V4, STDV4);
 }
 
 TEST(Manual, Erase)
@@ -350,6 +382,45 @@ TEST(Manual, Erase)
     V2.erase(V2.begin() + a, V2.begin() + c);
     STDV2.erase(STDV2.begin() + a, STDV2.begin() + c);
     EXPECT_EQ(V2, STDV2);
+}
+
+TEST(Manual, Emplace)
+{
+    vector<int> V2;
+    std::vector<int> STDV2;
+    for (size_t i = 0; i < 10; ++i){
+        int q = rnd();
+        V2.push_back(q);
+        STDV2.push_back(q);
+    }
+    EXPECT_EQ(V2, STDV2);
+    size_t a = 3;
+    int c = 3e4, d = 7e6;
+
+    V2.emplace(V2.begin() + a, c);
+    STDV2.emplace(STDV2.begin() + a, c);
+    EXPECT_EQ(V2, STDV2);
+
+    V2.emplace_back(d);
+    STDV2.emplace_back(d);
+    EXPECT_EQ(V2, STDV2);
+}
+
+TEST(Manual, InitList)
+{
+    vector V1({1, 2, 3, 4});
+    vector<int> V2;
+    V2 = {5, 6, 7, 8, 9};
+    V2 = V1;
+    EXPECT_EQ(V1, V2);
+    V1 = V2;
+    EXPECT_EQ(V1, V2);
+    std::vector STDV2 = {1};
+    
+    V2.assign({11, 12, 13, 14, 15, 16});
+    STDV2.assign({11, 12, 13, 14, 15, 16});
+    EXPECT_EQ(STDV2, V2);
+    
 }
 
 

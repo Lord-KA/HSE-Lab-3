@@ -8,7 +8,6 @@
 #include <algorithm>
 
 
-
 template< typename T, class Allocator = std::allocator<T> >
 class vector {
 private:
@@ -18,28 +17,10 @@ private:
     using size_type         = std::size_t;
     using difference_type   = std::ptrdiff_t;
 
-    template< class InputIt >
-    constexpr void vector_constructor( InputIt first, InputIt last, const std::false_type& /*IsIntegral*/){
-        if (data_)
-            allocator_.deallocate(data_, capacity_);
-        capacity_ = 0;
-        size_ = 0;
-        data_ = nullptr;
-        for (; first != last; ++first)
-            push_back(*first);
-    }
-
-    template< class Integer >
-    constexpr void vector_constructor( Integer n, Integer val, const std::true_type& /*IsIntegral*/){
-        if (data_)
-            allocator_.deallocate(data_, capacity_);
-        capacity_ = n;
-        size_ = n;
-        data_ = allocator_.allocate(capacity_);
-        if (!data_)
-            throw std::runtime_error("Failed to allocate memory");
-        std::fill(data_, data_ + capacity_, val);  
-    }
+    Allocator allocator_;
+    T* data_;
+    size_type capacity_;
+    size_type size_;
 
 
 public:
@@ -59,13 +40,7 @@ public:
 
     template< class InputIt >
     constexpr explicit vector( InputIt first, InputIt last,              
-                               const Allocator& alloc = Allocator() )  {
-        typedef typename std::is_integral<InputIt>::type _Integral;
-        allocator_ = alloc;
-        data_ = nullptr;
-        vector_constructor(first, last, _Integral());
-    }
-
+                               const Allocator& alloc = Allocator() );
 
     constexpr vector( const vector& other );
 
@@ -75,7 +50,7 @@ public:
 
     constexpr vector( vector&& other, const Allocator& alloc ); 
 
-    constexpr vector( std::initializer_list<T> init,                //TODO
+    constexpr vector( std::initializer_list<T> init,                
                       const Allocator& alloc = Allocator() );
 
     constexpr ~vector() { if (data_) allocator_.deallocate(data_, capacity_); }
@@ -85,7 +60,7 @@ public:
 
     constexpr vector& operator=( vector&& other ) noexcept ;
 
-    constexpr vector& operator=( std::initializer_list<T> ilist );  //TODO
+    constexpr vector& operator=( std::initializer_list<T> ilist );  
     
 
     constexpr void assign( size_type count, const T& value );
@@ -93,7 +68,7 @@ public:
     template< class InputIt >
     constexpr void assign( InputIt first, InputIt last );
 
-    constexpr void assign( std::initializer_list<T> ilist );        //TODO
+    constexpr void assign( std::initializer_list<T> ilist );        
 
 
     constexpr allocator_type get_allocator() const noexcept { return allocator_; }
@@ -236,19 +211,19 @@ public:
   
     constexpr void clear() noexcept { if (data_) allocator_.deallocate(data_, capacity_); size_ = 0; capacity_ = 0; data_ = nullptr; }
 
-    constexpr iterator insert( const iterator pos, const T& value ); 
+    constexpr iterator insert( iterator pos, const T& value ); 
 
-    constexpr iterator insert( const iterator pos, T&& value );
+    constexpr iterator insert( iterator pos, T&& value );
 
-    constexpr iterator insert( const iterator pos, size_type count, const T& value );
+    constexpr iterator insert( iterator pos, const size_type count, const T& value );
 
     template<class InputIt>
-    constexpr iterator insert( const iterator pos, InputIt first, InputIt last ); //TODO
+    constexpr iterator insert( iterator pos, InputIt first, InputIt last ); 
 
-    constexpr iterator insert( const iterator pos, std::initializer_list<T> ilist); //TODO
+    constexpr iterator insert( iterator pos, std::initializer_list<T> ilist); 
 
     template<class... Args>
-    constexpr iterator emplace( const iterator pos, Args&&... args ); //TODO
+    constexpr iterator emplace( const iterator pos, Args&&... args ); 
 
     constexpr iterator erase( const iterator pos ); 
 
@@ -259,7 +234,7 @@ public:
     constexpr void push_back( T&& value );
 
     template<class... Args>
-    constexpr T* emplace_back( Args&&... args);     //TODO
+    constexpr T* emplace_back( Args&&... args);     
 
     constexpr void pop_back() noexcept { assert(size_ != 0); --size_; };
 
@@ -279,10 +254,49 @@ public:
 
 
 private:
-    Allocator allocator_;
-    T* data_;
-    size_type capacity_;
-    size_type size_;
+    
+    template< class InputIt >
+    constexpr void _vector_iters_constructor( InputIt first, InputIt last, const std::false_type& /*IsIntegral*/) {
+        if (data_)
+            allocator_.deallocate(data_, capacity_);
+        capacity_ = 0;
+        size_ = 0;
+        data_ = nullptr;
+        size_t distance = std::distance(first, last);
+        resize(distance);
+        std::copy(first, last, data_);
+    }
+
+    template< class Integer >
+    constexpr void _vector_iters_constructor( Integer n, Integer val, const std::true_type& /*IsIntegral*/) {
+        if (data_)
+            allocator_.deallocate(data_, capacity_);
+        capacity_ = n;
+        size_ = n;
+        data_ = allocator_.allocate(capacity_);
+        if (!data_)
+            throw std::runtime_error("Failed to allocate memory");
+        std::fill(data_, data_ + capacity_, val);  
+    }
+
+
+    template< class InputIt >
+    constexpr iterator _vector_iters_insert( const iterator pos, InputIt first, InputIt last, const std::false_type& /*IsIntegral*/) {
+        size_t distance = std::distance(first, last);
+        resize(size() + distance);
+        std::copy(data_ + static_cast<size_t>(pos), data_ + size_ - distance, data_ + static_cast<size_t>(pos) + distance);
+        std::copy(first, last, begin() + pos);
+        return pos;
+    }
+
+    template< class Integer >
+    constexpr iterator _vector_iters_insert( const iterator pos, Integer count, Integer value, const std::true_type& /*IsIntegral*/) {
+        resize(size() + count);
+        std::copy(data_ + static_cast<size_t>(pos), data_ + size_ - count, data_ + static_cast<size_t>(pos) + count);
+        std::fill(begin() + pos, begin() + pos + count, value);
+        return pos;
+    }
+
 
 #ifndef NDEBUG
 
@@ -303,15 +317,19 @@ public:
 
 
 template< typename T, class Allocator >
-constexpr vector<T, Allocator>::vector() noexcept(noexcept(Allocator())) : data_(nullptr), capacity_(0), size_(0) {}
+constexpr vector<T, Allocator>::vector() noexcept(noexcept(Allocator())) 
+    : data_(nullptr), capacity_(0), size_(0) {}
 
 
 template< typename T, class Allocator >
-constexpr vector<T, Allocator>::vector( const Allocator& alloc ) noexcept : allocator_(alloc), data_(nullptr), capacity_(0), size_(0) {}
+constexpr vector<T, Allocator>::vector( const Allocator& alloc ) noexcept 
+    : allocator_(alloc), data_(nullptr), capacity_(0), size_(0) {}
 
 
 template< typename T, class Allocator >
-constexpr vector<T, Allocator>::vector( size_type count, const T& value, const Allocator& alloc) : allocator_(alloc), data_(nullptr), capacity_(count), size_(count) {
+constexpr vector<T, Allocator>::vector( size_type count, const T& value, const Allocator& alloc)
+    : allocator_(alloc), data_(nullptr), capacity_(count), size_(count) {
+
     data_ = allocator_.allocate(capacity_);
     if (!data_)
         throw std::runtime_error("Failed to allocate memory");
@@ -320,11 +338,23 @@ constexpr vector<T, Allocator>::vector( size_type count, const T& value, const A
 
 
 template< typename T, class Allocator >
-constexpr vector<T, Allocator>::vector( size_type count, const Allocator& alloc ) : allocator_(alloc), data_(nullptr), capacity_(count), size_(0) {
+constexpr vector<T, Allocator>::vector( size_type count, const Allocator& alloc )
+    : allocator_(alloc), data_(nullptr), capacity_(count), size_(0) {
+
     data_ = allocator_.allocate(capacity_);
     if (!data_)
         throw std::runtime_error("Failed to allocate memory");
 }
+
+
+template< typename T, class Allocator >
+template< class InputIt >
+constexpr vector<T, Allocator>::vector( InputIt first, InputIt last, const Allocator& alloc )
+    : allocator_(alloc), data_(nullptr) {
+
+    _vector_iters_constructor(first, last, typename std::is_integral<InputIt>::type());
+}
+
 
 
 template< typename T, class Allocator >
@@ -352,6 +382,13 @@ constexpr vector<T, Allocator>::vector( vector&& other ) : allocator_(other.allo
     other.capacity_ = 0;
 }
 
+
+template< typename T, class Allocator >
+constexpr vector<T, Allocator>::vector( std::initializer_list<T> ilist, const Allocator& alloc )
+    : allocator_(alloc), data_(nullptr) {    
+    
+    _vector_iters_constructor(ilist.begin(), ilist.end(), std::false_type());
+}
 
 template< typename T, class Allocator >
 constexpr vector<T, Allocator>::vector( vector&& other, const Allocator& alloc ) : allocator_(alloc), data_(nullptr), capacity_(other.capacity_), size_(other.size_) {
@@ -397,6 +434,11 @@ constexpr vector<T, Allocator>& vector<T, Allocator>::operator=( vector&& other 
     return *this;
 }
 
+template< typename T, class Allocator >
+constexpr vector<T, Allocator>& vector<T, Allocator>::operator=( std::initializer_list<T> ilist ) {
+    _vector_iters_constructor(ilist.begin(), ilist.end(), std::false_type());
+    return *this;
+}
 
 template< typename T, class Allocator >
 constexpr void vector<T, Allocator>::assign( size_type count, const T& value) {
@@ -415,9 +457,14 @@ constexpr void vector<T, Allocator>::assign( size_type count, const T& value) {
 template< typename T, class Allocator >
 template< class InputIt >
 constexpr void vector<T, Allocator>::assign( InputIt first, InputIt last) {
-    typedef typename std::is_integral<InputIt>::type _Integral;
-    vector_constructor(first, last, _Integral());
+    _vector_iters_constructor(first, last, typename std::is_integral<InputIt>::type());
 }
+
+template< typename T, class Allocator >
+constexpr void vector<T, Allocator>::assign( std::initializer_list<T> ilist ) {
+    _vector_iters_constructor(ilist.begin(), ilist.end(), std::false_type());
+}
+
 
 
 template< typename T, class Allocator >
@@ -502,12 +549,31 @@ constexpr typename vector<T, Allocator>::iterator vector<T, Allocator>::insert( 
 }
 
 template< typename T, class Allocator >             
-constexpr typename vector<T, Allocator>::iterator vector<T, Allocator>::insert( const vector<T, Allocator>::iterator pos, size_type count, const T& value ) {
+constexpr typename vector<T, Allocator>::iterator vector<T, Allocator>::insert( const vector<T, Allocator>::iterator pos, const size_type count, const T& value ) {
     resize(size() + count);
     std::copy(data_ + static_cast<size_t>(pos), data_ + size_ - count, data_ + static_cast<size_t>(pos) + count);
     std::fill(begin() + pos, begin() + pos + count, value);
     return pos;
 }
+
+template< typename T, class Allocator >             
+template< class InputIt >
+constexpr typename vector<T, Allocator>::iterator vector<T, Allocator>::insert( const typename vector<T, Allocator>::iterator pos, InputIt first, InputIt last) {
+    return _vector_iters_insert(pos, first, last, typename std::is_integral<InputIt>::type());
+}
+
+template< typename T, class Allocator >             
+constexpr typename vector<T, Allocator>::iterator vector<T, Allocator>::insert( const iterator pos, std::initializer_list<T> ilist) {
+    return _vector_iters_insert(pos, ilist.begin(), ilist.end(), std::false_type());
+}
+
+
+template< typename T, class Allocator >             
+template<class... Args>
+constexpr typename vector<T, Allocator>::iterator vector<T, Allocator>::emplace( const iterator pos, Args&&... args ) {
+    return insert(pos, T(args...));
+}
+
 
 template< typename T, class Allocator >             
 constexpr typename vector<T, Allocator>::iterator vector<T, Allocator>::erase( const iterator pos ) {
@@ -552,14 +618,8 @@ constexpr void vector<T, Allocator>::push_back( T&& value ) {
 template< typename T, class Allocator >
 template<class... Args>
 constexpr T* vector<T, Allocator>::emplace_back( Args&&... args) {
-    if (size_ == capacity_ || !capacity_){
-        if (!capacity_)
-            capacity_ = 1;
-        reserve(capacity_ * 2);
-    }
-
-    allocator_.construct(data_ + size_, args...);
-    ++size_;
+    push_back(T(args...));
+    return data_ + size_ - 1;
 }
 
 
